@@ -14,7 +14,7 @@ interface AccountState {
     addAccount: (email: string, refreshToken: string) => Promise<void>;
     deleteAccount: (accountId: string) => Promise<void>;
     deleteAccounts: (accountIds: string[]) => Promise<void>;
-    switchAccount: (accountId: string) => Promise<void>;
+    switchAccount: (accountId: string, targetIde?: string) => Promise<void>;
     refreshQuota: (accountId: string) => Promise<void>;
     refreshAllQuotas: () => Promise<accountService.RefreshStats>;
     reorderAccounts: (accountIds: string[]) => Promise<void>;
@@ -103,10 +103,10 @@ export const useAccountStore = create<AccountState>((set, get) => ({
         }
     },
 
-    switchAccount: async (accountId: string) => {
+    switchAccount: async (accountId: string, targetIde?: string) => {
         set({ loading: true, error: null });
         try {
-            await accountService.switchAccount(accountId);
+            await accountService.switchAccount(accountId, targetIde);
             await get().fetchCurrentAccount();
             set({ loading: false });
         } catch (error) {
@@ -274,12 +274,13 @@ export const useAccountStore = create<AccountState>((set, get) => ({
         set({ loading: true, error: null });
         try {
             const result = await accountService.warmUpAllAccounts();
-            await get().fetchAccounts();
             set({ loading: false });
             return result;
         } catch (error) {
             set({ error: String(error), loading: false });
             throw error;
+        } finally {
+            await get().fetchAccounts();
         }
     },
 
@@ -287,12 +288,13 @@ export const useAccountStore = create<AccountState>((set, get) => ({
         set({ loading: true, error: null });
         try {
             const result = await accountService.warmUpAccount(accountId);
-            await get().fetchAccounts();
             set({ loading: false });
             return result;
         } catch (error) {
             set({ error: String(error), loading: false });
             throw error;
+        } finally {
+            await get().fetchAccounts();
         }
     },
 

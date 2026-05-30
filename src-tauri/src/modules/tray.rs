@@ -127,7 +127,7 @@ pub fn create_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
                              let integration = crate::modules::integration::DesktopIntegration {
                                  app_handle: app_handle.clone(),
                              };
-                             if let Ok(_) = modules::switch_account(&next_account.id, &integration).await {
+                             if let Ok(_) = modules::switch_account(&next_account.id, None, &integration).await {
                                  // 3. Notify frontend
                                  let _ = app_handle.emit("tray://account-switched", next_account.id.clone());
                                  // 4. Update tray
@@ -202,9 +202,9 @@ pub fn update_tray_menus(app: &tauri::AppHandle) {
                          // Use strict matching, consistent with frontend
                          for m in q.models {
                              let name = m.name.to_lowercase();
-                             if name == "gemini-3-pro-high" { gemini_high = m.percentage; }
+                             if name == "gemini-3.1-pro-high" || name == "gemini-3-pro-high" { gemini_high = m.percentage; }
                              if name == "gemini-3-pro-image" { gemini_image = m.percentage; }
-                             if name == "claude-sonnet-4-5" { claude = m.percentage; }
+                             if name == "claude-sonnet-4-6" || name == "claude-sonnet-4-5" { claude = m.percentage; }
                          }
                          
                          menu_lines.push(format!("Gemini High: {}%", gemini_high));

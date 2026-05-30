@@ -1,4 +1,4 @@
-{
+﻿{
     "common": {
         "loading": "로딩 중...",
         "load_more": "더 보기",
@@ -163,6 +163,8 @@
         "last_used": "최근 사용",
         "reset_time": "초기화 시간",
         "switch_to": "이 계정으로 전환",
+        "switch_to_classic": "Antigravity (클래식 버전)으로 전환",
+        "switch_to_ide": "Antigravity IDE로 전환",
         "actions": "작업",
         "device_fingerprint": "디바이스 지문",
         "show_all_quotas": "모든 할당량 표시",
@@ -434,6 +436,10 @@
             "antigravity_path_desc": "Antigravity를 비표준 위치에 설치한 경우, 여기서 실행 파일 경로를 수동으로 지정할 수 있습니다 (MacOS의 경우 .app을 가리킴).",
             "antigravity_path_select": "Antigravity 실행 파일 선택",
             "antigravity_path_detected": "감지된 경로가 업데이트되었습니다",
+            "antigravity_ide_path": "Antigravity IDE 경로",
+            "antigravity_ide_path_placeholder": "D:\\Antigravity\\Antigravity.exe",
+            "antigravity_ide_path_desc": "Antigravity IDE(코드 편집기)의 실행 파일 경로를 지정합니다. 설정하면 계정 전환 시 이 경로의 프로세스가 실수로 종료되지 않도록 보호합니다.",
+            "antigravity_ide_path_select": "Antigravity IDE 실행 파일 선택",
             "detect_btn": "감지",
             "antigravity_args": "Antigravity 시작 인수",
             "antigravity_args_placeholder": "--user-data-dir=/path/to/data --some-other-flag",
@@ -831,15 +837,6 @@
             "restore_defaults": "기본 구성 복원",
             "reset_all": "모두 초기화"
         },
-        "models": {
-            "flash": "초고속",
-            "flash_thinking": "생각 능력",
-            "pro_high": "최고의 추론",
-            "pro_low": "낮은 할당량",
-            "sonnet": "코드 추론",
-            "sonnet_thinking": "생각의 사슬",
-            "opus_thinking": "가장 강력한 생각"
-        },
         "router": {
             "title": "모델 라우터",
             "subtitle": "시리즈별로 모델을 라우팅하거나 사용자 지정 정확한 매핑을 추가합니다.\n참고: 네이티브 Claude 패스스루 모델(예: claude-opus-4-6-thinking)은 기본적으로 시리즈 그룹을 우회합니다. 재정의하려면 \"전문가 사용자 지정 라우팅\"을 사용하세요.",
@@ -877,10 +874,6 @@
             "custom_preset_desc": "사용자 정의 프리셋",
             "custom_mappings": "사용자 지정 매핑",
             "group_title": "시리즈 그룹",
-            "gemini3_group_label": "Gemini 3 (권장)",
-            "gemini3_option_high": "gemini-3-pro-high (고품질)",
-            "gemini3_option_low": "gemini-3-pro-low (균형)",
-            "gemini3_option_flash": "gemini-3-flash (빠름)",
             "groups": {
                 "claude_45": {
                     "name": "Claude 4.6 TK 시리즈",

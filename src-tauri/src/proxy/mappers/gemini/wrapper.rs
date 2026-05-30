@@ -6,7 +6,9 @@ pub fn wrap_request(
     body: &Value,
     project_id: &str,
     mapped_model: &str,
+    account_id: Option<&str>,
     session_id: Option<&str>,
+    token: Option<&crate::proxy::token_manager::ProxyToken>, // [NEW] 动态规格注入
 ) -> Value {
     // 优先使用传入的 mapped_model，其次尝试从 body 获取
     let original_model = body
@@ -20,6 +22,12 @@ pub fn wrap_request(
     } else {
         original_model
     };
+
+    // [ADDED v4.1.24] 计算 message_count 供 requestId 使用
+    let message_count = body.get("contents")
+        .and_then(|c| c.as_array())
+        .map(|a| a.len())
+        .unwrap_or(1);
 
     // 复制 body 以便修改
     let mut inner_request = body.clone();
@@ -78,7 +86,7 @@ pub fn wrap_request(
                             }
                         }
 
-                        // 3. 处理 thoughtSignature (原有逻辑保持)
+                        // 3. 处理 thoughtSignature
                         if obj.contains_key("functionCall") && obj.get("thoughtSignature").is_none()
                         {
                             if let Some(s_id) = session_id {
@@ -87,6 +95,15 @@ pub fn wrap_request(
                                 {
                                     obj.insert("thoughtSignature".to_string(), json!(sig));
                                     tracing::debug!("[Gemini-Wrap] Injected signature (len: {}) for session: {}", sig.len(), s_id);
+                                } else {
+                                    // [FIX #2167] Session 缓存为空时对 flash 模型注入哨兵值
+                                    // Flash 模型如果不提供任何签名，Gemini API 会拒绝 functionCall
+                                    let is_flash = final_model_name.to_lowercase().contains("gemini-3-flash")
+                                        || final_model_name.to_lowercase().contains("gemini-3.1-flash");
+                                    if is_flash {
+                                        obj.insert("thoughtSignature".to_string(), json!("skip_thought_signature_validator"));
+                                        tracing::debug!("[Gemini-Wrap] [FIX #2167] Injected sentinel signature for flash model (no session cache)");
+                                    }
                                 }
                             }
                         }
@@ -113,7 +130,8 @@ pub fn wrap_request(
         let is_preview = lower_model.contains("preview");
         let should_inject = lower_model.contains("thinking")
             || (lower_model.contains("gemini-2.0-pro") && !is_preview)
-            || (lower_model.contains("gemini-3-pro") && !is_preview);
+            || (lower_model.contains("gemini-3-pro") && !is_preview)
+            || (lower_model.contains("gemini-3.1-pro") && !is_preview);
 
         if should_inject {
             // Scope for borrowing inner_request/gen_config
@@ -133,8 +151,8 @@ pub fn wrap_request(
                 );
 
                 // [FIX] 统一注入到 generationConfig.thinkingConfig
-                // Claude 模型使用 16000 预算，Gemini 使用 24576
-                let default_budget = if is_claude { 16000 } else { 24576 };
+                // 使用动态规格提供的默认预算
+                let default_budget = crate::proxy::model_specs::get_thinking_budget(final_model_name, token);
                 
                 let gen_config = inner_request
                     .as_object_mut()
@@ -163,12 +181,45 @@ pub fn wrap_request(
             .as_object_mut()
             .unwrap();
 
+        // [ADDED v4.1.24] Inject topK=40 and topP=1.0 if not present to match official client
+        if !gen_config.contains_key("topK") {
+            gen_config.insert("topK".to_string(), json!(40));
+        }
+        if !gen_config.contains_key("topP") {
+            gen_config.insert("topP".to_string(), json!(1.0));
+        }
+
+        // [FIX] Convert v1beta thinkingLevel (string) to v1internal thinkingBudget (number).
+        // Clients (e.g. OpenClaw, Cline) may send thinkingLevel which v1internal does not accept,
+        // causing 400 INVALID_ARGUMENT. Convert before any budget processing below.
+        if let Some(thinking_config) = gen_config.get_mut("thinkingConfig") {
+            if let Some(level) = thinking_config.get("thinkingLevel").and_then(|v| v.as_str()).map(|s| s.to_uppercase()) {
+                let thinking_budget_cap = crate::proxy::model_specs::get_thinking_budget(final_model_name, token);
+                let budget: i64 = match level.as_str() {
+                    "NONE" => 0,
+                    "LOW" => (thinking_budget_cap / 4).max(4096) as i64,
+                    "MEDIUM" => (thinking_budget_cap / 2).max(8192) as i64,
+                    "HIGH" => thinking_budget_cap as i64,
+                    _ => (thinking_budget_cap / 2).max(8192) as i64, // safe default
+                };
+                tracing::info!(
+                    "[Gemini-Wrap] Converting thinkingLevel '{}' to thinkingBudget {}",
+                    level, budget
+                );
+                if let Some(tc) = thinking_config.as_object_mut() {
+                    tc.remove("thinkingLevel");
+                    tc.insert("thinkingBudget".to_string(), json!(budget));
+                }
+            }
+        }
+
         if let Some(thinking_config) = gen_config.get_mut("thinkingConfig") {
             if let Some(budget_val) = thinking_config.get("thinkingBudget") {
                 if let Some(budget_i64) = budget_val.as_i64() {
                     // [NEW] -1 indicates native dynamic mode, skip capping
                     if budget_i64 != -1 {
                         let budget = budget_i64 as u64;
+                        let thinking_budget_cap = crate::proxy::model_specs::get_thinking_budget(final_model_name, token);
                         let tb_config = crate::proxy::config::get_thinking_budget_config();
                         let final_budget = match tb_config.mode {
                             crate::proxy::config::ThinkingBudgetMode::Passthrough => budget,
@@ -178,8 +229,8 @@ pub fn wrap_request(
                                     || final_model_name.contains("thinking"))
                                     && !final_model_name.contains("-image");
 
-                                if is_limited && val > 24576 {
-                                    24576
+                                if is_limited && val > thinking_budget_cap {
+                                    thinking_budget_cap
                                 } else {
                                     val
                                 }
@@ -189,8 +240,8 @@ pub fn wrap_request(
                                     || final_model_name.contains("thinking"))
                                     && !final_model_name.contains("-image");
 
-                                if is_limited && budget > 24576 {
-                                    24576
+                                if is_limited && budget > thinking_budget_cap {
+                                    thinking_budget_cap
                                 } else {
                                     budget
                                 }
@@ -244,7 +295,28 @@ pub fn wrap_request(
         }
     }
 
-    // [FIX] Removed forced maxOutputTokens (64000) as it exceeds limits for Gemini 1.5 Flash/Pro standard models (8192).
+    // [NEW] 按模型对 maxOutputTokens 进行三层限额 (Dynamic > Static Default > 65535)
+    // 修复: gemini-cli 等客户端发送的 131072 超过部分模型支持的上限，导致 v1internal 返回 400 INVALID_ARGUMENT
+    {
+        let final_cap = crate::proxy::model_specs::get_max_output_tokens(final_model_name, token);
+        let gen_config = inner_request
+            .as_object_mut()
+            .unwrap()
+            .entry("generationConfig")
+            .or_insert(serde_json::json!({}))
+            .as_object_mut()
+            .unwrap();
+        if let Some(current) = gen_config.get("maxOutputTokens").and_then(|v| v.as_u64()) {
+            if current > final_cap {
+                tracing::debug!(
+                    "[Gemini-Wrap] Capped maxOutputTokens from {} to {} for model {}",
+                    current, final_cap, final_model_name
+                );
+                gen_config.insert("maxOutputTokens".to_string(), serde_json::json!(final_cap));
+            }
+        }
+    }
+
     // This caused upstream to return empty/invalid responses, leading to 'NoneType' object has no attribute 'strip' in Python clients.
     // relying on upstream defaults or user provided values is safer.
 
@@ -323,7 +395,25 @@ pub fn wrap_request(
 
     // Inject googleSearch tool if needed
     if config.inject_google_search {
-        crate::proxy::mappers::common_utils::inject_google_search_tool(&mut inner_request);
+        // [NEW] 阶段 7.3: 如果是 WebSearch 类型，注入官方特定属性 (maxResultCount: 5)
+        if config.request_type == "web_search" {
+            if let Some(obj) = inner_request.as_object_mut() {
+                let tools_entry = obj.entry("tools").or_insert_with(|| json!([]));
+                if let Some(tools_arr) = tools_entry.as_array_mut() {
+                    tools_arr.push(json!({
+                        "googleSearch": {
+                            "enhancedContent": {
+                                "imageSearch": {
+                                    "maxResultCount": 5
+                                }
+                            }
+                        }
+                    }));
+                }
+            }
+        } else {
+            crate::proxy::mappers::common_utils::inject_google_search_tool(&mut inner_request, Some(&config.final_model));
+        }
     }
 
     // Inject imageConfig if present (for image generation models)
@@ -368,11 +458,15 @@ pub fn wrap_request(
             }
         }
     } else {
-        // [NEW] 只在非图像生成模式下注入 Antigravity 身份 (原始简化版)
-        let antigravity_identity = "You are Antigravity, a powerful agentic AI coding assistant designed by the Google Deepmind team working on Advanced Agentic Coding.\n\
-        You are pair programming with a USER to solve their coding task. The task may require creating a new codebase, modifying or debugging an existing codebase, or simply answering a question.\n\
-        **Absolute paths only**\n\
-        **Proactiveness**";
+        // [NEW] 阶段 7.3: WebSearch 专属身份仿真 (对齐官方 main.go:738)
+        let antigravity_identity = if config.request_type == "web_search" {
+            "You are a search engine bot. You will be given a query from a user. Your task is to search the web for relevant information that will help the user. You MUST perform a web search. Do not respond or interact with the user, please respond as if they typed the query into a search bar."
+        } else {
+            "You are Antigravity, a powerful agentic AI coding assistant designed by the Google Deepmind team working on Advanced Agentic Coding.\n\
+            You are pair programming with a USER to solve their coding task. The task may require creating a new codebase, modifying or debugging an existing codebase, or simply answering a question.\n\
+            **Absolute paths only**\n\
+            **Proactiveness**"
+        };
 
         // [HYBRID] 检查是否已有 systemInstruction
         if let Some(system_instruction) = inner_request.get_mut("systemInstruction") {
@@ -429,16 +523,71 @@ pub fn wrap_request(
         }
     }
 
-    let final_request = json!({
+    // [ADDED v4.1.24] 扩展 toolConfig 到 VALIDATED 模式
+    if inner_request.get("tools").is_some() && !inner_request.get("toolConfig").is_some() {
+        inner_request["toolConfig"] = json!({
+            "functionCallingConfig": { "mode": "VALIDATED" }
+        });
+    }
+
+    // [ADDED v4.1.24] 注入基于账号的稳定 sessionId
+    if let Some(account_id_str) = account_id {
+        inner_request["sessionId"] = json!(crate::proxy::common::session::derive_session_id(account_id_str));
+    }
+
+    let sid = session_id.unwrap_or("default");
+    
+    // [NEW] 1. 深度对齐 requestId 格式 (官方格式: agent/{timestamp_ms}/{random_hex_8bytes})
+    // 每次请求生成完全唯一的 ID，避免重试时的幂等性冲突导致 Google 返回旧缓存
+    let timestamp_ms = chrono::Utc::now().timestamp_millis();
+    let random_hex = &uuid::Uuid::new_v4().simple().to_string()[..8]; // 移除对外部 hex crate 的依赖
+    let official_request_id = format!("agent/{}/{}", timestamp_ms, random_hex);
+
+    // [NEW] 2. 动态 userAgent 仿真 (支持 jetski)
+    // 根据账号属性或域名判断。Go Worker 中企业/GCP 账号通常使用 jetski 指纹。
+    let is_enterprise = if let Some(t) = token {
+        !t.email.ends_with("@gmail.com") && !t.email.ends_with("@googlemail.com")
+    } else {
+        false
+    };
+    
+    // [NEW] 阶段 7.2: 动态 IDEType 指纹对齐
+    let official_ide_type = if is_enterprise { "JETSKI" } else { "ANTIGRAVITY" };
+    let official_user_agent = if is_enterprise { "jetski" } else { "antigravity" };
+
+    // [NEW] 如果是 loadCodeAssist 请求，注入 metadata 字段对齐官方
+    if final_model_name == "loadCodeAssist" || inner_request.get("metadata").is_some() {
+        let metadata = inner_request.as_object_mut().unwrap().entry("metadata").or_insert(json!({}));
+        if let Some(m_obj) = metadata.as_object_mut() {
+            if m_obj.get("ideType").is_none() {
+                m_obj.insert("ideType".to_string(), json!(official_ide_type));
+            }
+        }
+    }
+
+    // [NEW] 3. 条件注入 enabledCreditTypes
+    // 这是官方 Worker 极高权重的一个指纹字段。
+    // 只有在非图像生成请求（即 agent 类型请求）时注入，避免图像生成场景出现 Credit 判定异常。
+    // 特别注意：这是 Google 识别“官方客户端”的重要凭证之一。
+    let is_agent_request = config.request_type != "image_gen";
+    
+    let mut final_request_obj = json!({
         "project": project_id,
-        "requestId": format!("agent-{}", uuid::Uuid::new_v4()), // 修正为 agent- 前缀
+        "requestId": official_request_id,
         "request": inner_request,
         "model": config.final_model,
-        "userAgent": "antigravity",
-        "requestType": config.request_type
+        "userAgent": official_user_agent,
+        "requestType": if is_agent_request { "agent" } else { "image_gen" }
     });
 
-    final_request
+    if is_agent_request {
+        if let Some(obj) = final_request_obj.as_object_mut() {
+            // 强制注入 Google One AI 信用额度支持标号
+            obj.insert("enabledCreditTypes".to_string(), json!(["GOOGLE_ONE_AI"]));
+        }
+    }
+
+    final_request_obj
 }
 
 #[cfg(test)]
@@ -469,7 +618,7 @@ mod test_fixes {
             }]
         });
 
-        let result = wrap_request(&body, "proj", "gemini-pro", Some(session_id));
+        let result = wrap_request(&body, "proj", "gemini-pro", None, Some(session_id), None);
         let injected_sig = result["request"]["contents"][0]["parts"][0]["thoughtSignature"]
             .as_str()
             .unwrap();
@@ -533,10 +682,10 @@ mod tests {
             "contents": [{"role": "user", "parts": [{"text": "Hi"}]}]
         });
 
-        let result = wrap_request(&body, "test-project", "gemini-2.5-flash", None);
+        let result = wrap_request(&body, "test-project", "gemini-2.5-flash", None, None, None);
         assert_eq!(result["project"], "test-project");
         assert_eq!(result["model"], "gemini-2.5-flash");
-        assert!(result["requestId"].as_str().unwrap().starts_with("agent-"));
+        assert!(result["requestId"].as_str().unwrap().starts_with("agent/"));
     }
 
     #[test]
@@ -559,7 +708,7 @@ mod tests {
             "messages": []
         });
 
-        let result = wrap_request(&body, "test-proj", "gemini-pro", None);
+        let result = wrap_request(&body, "test-proj", "gemini-pro", None, None, None);
 
         // 验证 systemInstruction
         let sys = result
@@ -585,7 +734,7 @@ mod tests {
         });
 
         // Test with Flash model
-        let result = wrap_request(&body, "test-proj", "gemini-2.0-flash-thinking-exp", None);
+        let result = wrap_request(&body, "test-proj", "gemini-2.0-flash-thinking-exp", None, None, None);
         let req = result.get("request").unwrap();
         let gen_config = req.get("generationConfig").unwrap();
         let budget = gen_config["thinkingConfig"]["thinkingBudget"]
@@ -605,7 +754,7 @@ mod tests {
                 }
             }
         });
-        let result_pro = wrap_request(&body_pro, "test-proj", "gemini-2.0-pro-exp", None);
+        let result_pro = wrap_request(&body_pro, "test-proj", "gemini-2.0-pro-exp", None, None, None);
         let budget_pro = result_pro["request"]["generationConfig"]["thinkingConfig"]
             ["thinkingBudget"]
             .as_u64()
@@ -629,7 +778,7 @@ mod tests {
             "contents": [{"role": "user", "parts": [{"text": "Draw a cat"}]}]
         });
 
-        let result = wrap_request(&body, "test-proj", "gemini-3-pro-image-2k", None);
+        let result = wrap_request(&body, "test-proj", "gemini-3-pro-image-2k", None, None, None);
         let req = result.get("request").unwrap();
         let gen_config = req.get("generationConfig").unwrap();
         
@@ -651,7 +800,7 @@ mod tests {
             }
         });
 
-        let result = wrap_request(&body, "test-proj", "gemini-pro", None);
+        let result = wrap_request(&body, "test-proj", "gemini-pro", None, None, None);
         let sys = result
             .get("request")
             .unwrap()
@@ -682,7 +831,7 @@ mod tests {
             }
         });
 
-        let result = wrap_request(&body, "test-proj", "gemini-pro", None);
+        let result = wrap_request(&body, "test-proj", "gemini-pro", None, None, None);
         let sys = result
             .get("request")
             .unwrap()
@@ -714,7 +863,7 @@ mod tests {
             "contents": [{"parts": parts}]
         });
 
-        let result = wrap_request(&body, "test-proj", "gemini-3-pro-image", None);
+        let result = wrap_request(&body, "test-proj", "gemini-3-pro-image", None, None, None);
 
         let request = result.get("request").unwrap();
         let contents = request.get("contents").unwrap().as_array().unwrap();
@@ -749,7 +898,7 @@ mod tests {
         });
 
         // Test with Pro model
-        let result = wrap_request(&body, "test-proj", "gemini-3-pro-preview", None);
+        let result = wrap_request(&body, "test-proj", "gemini-3-pro-preview", None, None, None);
         let req = result.get("request").unwrap();
         let gen_config = req.get("generationConfig").unwrap();
 
@@ -792,7 +941,7 @@ mod tests {
                 "messages": [{"role": "user", "content": "hi"}]
             });
 
-            let result = wrap_request(&body, "proj", "claude-3-7-sonnet-thinking", None);
+            let result = wrap_request(&body, "proj", "claude-3-7-sonnet-thinking", None, None, None);
             let req = result.get("request").unwrap();
 
             // 1. 确保根目录没有 thinking
@@ -815,7 +964,7 @@ mod tests {
                 "contents": [{"role": "user", "parts": [{"text": "hi"}]}]
             });
 
-            let result = wrap_request(&body, "proj", "gemini-2.0-flash-thinking-exp", None);
+            let result = wrap_request(&body, "proj", "gemini-2.0-flash-thinking-exp", None, None, None);
             let req = result.get("request").unwrap();
             let gen_config = req.get("generationConfig").unwrap();
             let thinking_config = gen_config.get("thinkingConfig").unwrap();
@@ -824,7 +973,6 @@ mod tests {
             assert_eq!(budget, 24576, "Gemini default thinking budget should be 24576");
         }
     }
-}
 
     #[test]
     fn test_gemini_pro_auto_inject_thinking() {
@@ -845,7 +993,7 @@ mod tests {
         });
 
         // Test with Pro-preview model (should NOT auto-inject to avoid 400)
-        let result = wrap_request(&body, "test-proj", "gemini-3-pro-preview", None);
+        let result = wrap_request(&body, "test-proj", "gemini-3-pro-preview", None, None, None);
         let req = result.get("request").unwrap();
         let gen_config = req.get("generationConfig").unwrap();
 
@@ -860,7 +1008,7 @@ mod tests {
             "model": "gemini-3-pro",
             "generationConfig": {}
         });
-        let result_std = wrap_request(&body_std, "test-proj", "gemini-3-pro", None);
+        let result_std = wrap_request(&body_std, "test-proj", "gemini-3-pro", None, None, None);
         let gen_config_std = result_std.get("request").unwrap().get("generationConfig").unwrap();
         
         assert!(
@@ -879,7 +1027,7 @@ mod tests {
             "prompt": "Test"
         });
 
-        let result_1 = wrap_request(&body_1, "test-proj", "gemini-3-pro-image", None);
+        let result_1 = wrap_request(&body_1, "test-proj", "gemini-3-pro-image", None, None, None);
         let req_1 = result_1.get("request").unwrap();
         let gen_config_1 = req_1.get("generationConfig").unwrap();
         let image_config_1 = gen_config_1.get("imageConfig").unwrap();
@@ -895,7 +1043,7 @@ mod tests {
              "prompt": "Test"
         });
 
-        let result_2 = wrap_request(&body_2, "test-proj", "gemini-3-pro-image", None);
+        let result_2 = wrap_request(&body_2, "test-proj", "gemini-3-pro-image", None, None, None);
         let req_2 = result_2.get("request").unwrap();
         let image_config_2 = req_2["generationConfig"]["imageConfig"]
             .as_object()
@@ -905,3 +1053,35 @@ mod tests {
         assert_eq!(image_config_2["imageSize"], "1K");
     }
 
+    #[test]
+    fn test_mixed_tools_injection_gemini_native() {
+        // 验证 Gemini Native 协议在 Gemini 2.0+ 下支持混合工具
+        let body = json!({
+            "contents": [{"parts": [{"text": "Hello"}]}],
+            "tools": [{"functionDeclarations": [{"name": "get_weather", "parameters": {"type": "OBJECT", "properties": {"location": {"type": "STRING"}}}}]}],
+            "generationConfig": {}
+        });
+
+        // 模拟 -online 触发的 RequestConfig
+        use crate::proxy::mappers::common_utils::resolve_request_config;
+        let _config = resolve_request_config("-online", "gemini-2.0-flash", &None, None, None, None, None);
+        
+        // 实际上 wrap_request 内部会根据 config.inject_google_search 调用 inject_google_search_tool
+        // 但 wrap_request 的签名不直接接受 RequestConfig，它内部逻辑如下：
+        // if config.inject_google_search { ... }
+        
+        // 我们改为直接测试涉及的 wrap_request 逻辑片段。
+        // 由于测试 wrap_request 比较复杂（涉及外部 config），
+        // 我们可以直接验证 inject_google_search_tool 在 native 格式下的表现。
+        
+        let mut inner_request = body.clone();
+        crate::proxy::mappers::common_utils::inject_google_search_tool(&mut inner_request, Some("gemini-2.0-flash"));
+        
+        let tools = inner_request["tools"].as_array().expect("Should have tools");
+        let has_functions = tools.iter().any(|t| t.get("functionDeclarations").is_some());
+        let has_google_search = tools.iter().any(|t| t.get("googleSearch").is_some());
+        
+        assert!(has_functions, "Should contain functionDeclarations");
+        assert!(has_google_search, "Should contain googleSearch (Gemini 2.0+ supports mixed tools)");
+    }
+}

@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use uuid::Uuid;
-use std::collections::HashSet;
 
 use crate::models::{
     Account, AccountIndex, AccountSummary, DeviceProfile, DeviceProfileVersion, QuotaData,
@@ -17,6 +16,7 @@ use std::sync::Mutex;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
     use std::sync::Mutex as StdMutex;
 
     // Global mutex to prevent concurrent test execution
@@ -74,6 +74,8 @@ mod tests {
                 3600,
                 Some(email.to_string()),
                 None,
+                None,
+                true,
                 None,
             ),
         );
@@ -317,6 +319,7 @@ mod tests {
 
         println!("Backup creation on parse failure: successfully created backup");
     }
+
 }
 
 /// Global account write lock to prevent corruption during concurrent operations
@@ -654,10 +657,23 @@ pub fn save_account(account: &Account) -> Result<(), String> {
     let accounts_dir = get_accounts_dir()?;
     let account_path = accounts_dir.join(format!("{}.json", account.id));
 
+    let temp_filename = format!("{}.tmp.{}", account.id, Uuid::new_v4());
+    let temp_path = accounts_dir.join(&temp_filename);
+
     let content = serde_json::to_string_pretty(account)
         .map_err(|e| format!("failed_to_serialize_account_data: {}", e))?;
 
-    fs::write(&account_path, content).map_err(|e| format!("failed_to_save_account_data: {}", e))
+    if let Err(e) = std::fs::write(&temp_path, content) {
+        let _ = std::fs::remove_file(&temp_path);
+        return Err(format!("failed_to_write_temp_account_file: {}", e));
+    }
+
+    if let Err(e) = atomic_replace_file(&temp_path, &account_path) {
+        let _ = std::fs::remove_file(&temp_path);
+        return Err(format!("failed_to_replace_account_file: {}", e));
+    }
+
+    Ok(())
 }
 
 /// List all accounts
@@ -923,6 +939,7 @@ pub fn reorder_accounts(account_ids: &[String]) -> Result<(), String> {
 /// Switch current account (Core Logic)
 pub async fn switch_account(
     account_id: &str,
+    target_ide: Option<&str>,
     integration: &(impl modules::integration::SystemIntegration + ?Sized),
 ) -> Result<(), String> {
     use crate::modules::oauth;
@@ -941,20 +958,28 @@ pub async fn switch_account(
 
     let mut account = load_account(account_id)?;
     crate::modules::logger::log_info(&format!(
-        "Switching to account: {} (ID: {})",
-        account.email, account.id
+        "Switching to account: {} (ID: {}) (target_ide: {:?})",
+        account.email, account.id, target_ide
     ));
 
-    // 2. Ensure Token is valid (auto-refresh)
-    let fresh_token = oauth::ensure_fresh_token(&account.token, Some(&account.id))
-        .await
-        .map_err(|e| format!("Token refresh failed: {}", e))?;
+    // 2. Ensure token is valid before switch. Surface clearer hints for known account-state failures.
+    let fresh_token = match oauth::ensure_fresh_token(&account.token, Some(&account.id)).await {
+        Ok(token) => token,
+        Err(e) => {
+            if is_account_access_blocked_message(&e) {
+                mark_validation_blocked(&mut account, &e);
+            }
+            return Err(format_switch_refresh_error(&e));
+        }
+    };
 
     // If Token updated, save back to account file
     if fresh_token.access_token != account.token.access_token {
         account.token = fresh_token.clone();
         save_account(&account)?;
     }
+
+    ensure_enterprise_project_ready(&mut account).await?;
 
     // [FIX] Ensure account has a device profile for isolation
     if account.device_profile.is_none() {
@@ -972,7 +997,7 @@ pub async fn switch_account(
     }
 
     // 3. Execute platform-specific system integration (Close proc, Inject DB, Start proc, etc.)
-    integration.on_account_switch(&account).await?;
+    integration.on_account_switch(&account, target_ide).await?;
 
     // 4. Update tool internal state
     {
@@ -995,6 +1020,187 @@ pub async fn switch_account(
     Ok(())
 }
 
+fn is_enterprise_client(client_key: Option<&str>) -> bool {
+    client_key
+        .map(str::trim)
+        .filter(|key| !key.is_empty())
+        .map(|key| key.eq_ignore_ascii_case("antigravity_enterprise"))
+        .unwrap_or(false)
+}
+
+fn normalize_project_id(project_id: Option<&str>) -> Option<String> {
+    project_id
+        .map(str::trim)
+        .filter(|pid| !pid.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+async fn ensure_enterprise_project_ready(account: &mut Account) -> Result<(), String> {
+    if !is_enterprise_client(account.token.oauth_client_key.as_deref()) {
+        return Ok(());
+    }
+
+    if normalize_project_id(account.token.project_id.as_deref()).is_some() {
+        return Ok(());
+    }
+
+    crate::modules::logger::log_warn(&format!(
+        "Account {} is using enterprise OAuth client but missing project_id. Trying to resolve before switch...",
+        account.email
+    ));
+
+    match crate::proxy::project_resolver::fetch_project_id(&account.token.access_token).await {
+        Ok(project_id) => {
+            crate::modules::logger::log_info(&format!(
+                "Resolved enterprise project_id for {}: {}",
+                account.email, project_id
+            ));
+            account.token.project_id = Some(project_id);
+            save_account(account)?;
+            Ok(())
+        }
+        Err(e) => {
+            crate::modules::logger::log_warn(&format!(
+                "Account {} is currently missing enterprise project_id and auto-resolve failed ({}). Allowing switch to proceed, but certain enterprise features may be limited.",
+                account.email, e
+            ));
+            Ok(())
+        }
+    }
+}
+
+fn is_rate_limit_error(err: &crate::error::AppError) -> bool {
+    match err {
+        crate::error::AppError::Network(_, Some(status)) => *status == 429,
+        crate::error::AppError::Unknown(msg)
+        | crate::error::AppError::OAuth(msg)
+        | crate::error::AppError::Account(msg)
+        | crate::error::AppError::Config(msg) => {
+            let lower = msg.to_lowercase();
+            lower.contains("429")
+                || lower.contains("too many requests")
+                || lower.contains("resource_exhausted")
+                || lower.contains("resource has been exhausted")
+        }
+        _ => false,
+    }
+}
+
+fn recover_cached_quota_on_rate_limit(
+    account: &Account,
+    err: &crate::error::AppError,
+) -> Option<QuotaData> {
+    if !is_rate_limit_error(err) {
+        return None;
+    }
+
+    let cached = account.quota.clone()?;
+    if cached.models.is_empty() {
+        return None;
+    }
+
+    Some(cached)
+}
+
+fn is_validation_required_error(err: &crate::error::AppError) -> bool {
+    let text = err.to_string().to_lowercase();
+    text.contains("verify your account")
+        || text.contains("further action is required")
+        || text.contains("validation_url")
+        || text.contains("appeal_url")
+        || text.contains("validation required")
+}
+
+fn is_account_access_blocked_message(message: &str) -> bool {
+    let text = message.to_lowercase();
+    text.contains("verify your account")
+        || text.contains("further action is required")
+        || text.contains("validation_url")
+        || text.contains("appeal_url")
+        || text.contains("validation required")
+        || text.contains("unauthorized_client")
+        || text.contains("invalid_client")
+        || text.contains("invalid_grant")
+        || text.contains("resource_exhausted")
+        || text.contains("resource has been exhausted")
+}
+
+fn format_switch_refresh_error(message: &str) -> String {
+    let lower = message.to_lowercase();
+
+    if lower.contains("unauthorized_client")
+        || lower.contains("invalid_client")
+        || lower.contains("invalid_grant")
+    {
+        return format!(
+            "Token refresh failed: OAuth client is not authorized for this account. Please sign in again in Antigravity-Manager and complete authorization/verification. Raw error: {}",
+            message
+        );
+    }
+
+    if lower.contains("verify your account")
+        || lower.contains("further action is required")
+        || lower.contains("validation_url")
+        || lower.contains("appeal_url")
+        || lower.contains("validation required")
+    {
+        return format!(
+            "Token refresh failed: account requires additional verification. Please finish verification in Antigravity, then retry account switch. Raw error: {}",
+            message
+        );
+    }
+
+    if lower.contains("resource_exhausted") || lower.contains("resource has been exhausted") {
+        return format!(
+            "Token refresh failed: account is rate-limited or temporarily restricted (RESOURCE_EXHAUSTED). Please retry later. Raw error: {}",
+            message
+        );
+    }
+
+    format!("Token refresh failed: {}", message)
+}
+
+fn format_rate_limit_block_reason(err: &crate::error::AppError) -> String {
+    format!(
+        "Account is temporarily rate-limited or risk-controlled (RESOURCE_EXHAUSTED). Please cool down and retry later. Raw error: {}",
+        err
+    )
+}
+
+fn mark_validation_blocked(account: &mut Account, reason: &str) {
+    if account.validation_blocked
+        && account.validation_blocked_reason.as_deref() == Some(reason)
+    {
+        return;
+    }
+
+    account.validation_blocked = true;
+    account.validation_blocked_reason = Some(reason.to_string());
+    if let Err(e) = save_account(account) {
+        crate::modules::logger::log_warn(&format!(
+            "Failed to persist validation_blocked state for {}: {}",
+            account.email, e
+        ));
+    }
+}
+
+fn clear_validation_blocked(account: &mut Account) {
+    if !account.validation_blocked {
+        return;
+    }
+
+    account.validation_blocked = false;
+    account.validation_blocked_until = None;
+    account.validation_blocked_reason = None;
+    account.validation_url = None;
+    if let Err(e) = save_account(account) {
+        crate::modules::logger::log_warn(&format!(
+            "Failed to clear validation_blocked state for {}: {}",
+            account.email, e
+        ));
+    }
+}
+
 /// Get device profile info: current storage.json + account bound profile
 #[derive(Debug, Serialize)]
 pub struct DeviceProfiles {
@@ -1006,7 +1212,7 @@ pub struct DeviceProfiles {
 
 pub fn get_device_profiles(account_id: &str) -> Result<DeviceProfiles, String> {
     // In headless/Docker mode, storage.json may not exist - handle gracefully
-    let current = crate::modules::device::get_storage_path()
+    let current = crate::modules::device::get_storage_path(None)
         .ok()
         .and_then(|path| crate::modules::device::read_profile(&path).ok());
     let account = load_account(account_id)?;
@@ -1023,7 +1229,7 @@ pub fn bind_device_profile(account_id: &str, mode: &str) -> Result<DeviceProfile
     use crate::modules::device;
 
     let profile = match mode {
-        "capture" => device::read_profile(&device::get_storage_path()?)?,
+        "capture" => device::read_profile(&device::get_storage_path(None)?)?,
         "generate" => device::generate_profile(),
         _ => return Err("mode must be 'capture' or 'generate'".to_string()),
     };
@@ -1132,7 +1338,7 @@ pub fn apply_device_profile(account_id: &str) -> Result<DeviceProfile, String> {
         .device_profile
         .clone()
         .ok_or("Account has no bound device profile")?;
-    let storage_path = device::get_storage_path()?;
+    let storage_path = device::get_storage_path(None)?;
     device::write_profile(&storage_path, &profile)?;
     account.update_last_used();
     save_account(&account)?;
@@ -1309,6 +1515,55 @@ pub fn toggle_proxy_status(
     Ok(())
 }
 
+/// Find account ID by email (from index)
+pub fn find_account_id_by_email(email: &str) -> Option<String> {
+    load_account_index().ok()?.accounts.into_iter()
+        .find(|a| a.email == email)
+        .map(|a| a.id)
+}
+
+pub fn mark_account_forbidden(account_id: &str, reason: &str) -> Result<(), String> {
+    let _lock = ACCOUNT_INDEX_LOCK
+        .lock()
+        .map_err(|e| format!("failed_to_acquire_lock: {}", e))?;
+
+    let mut account = load_account(account_id)?;
+
+    // 1. Update quota status
+    if let Some(ref mut q) = account.quota {
+        q.is_forbidden = true;
+        q.forbidden_reason = Some(reason.to_string());
+    } else {
+        account.quota = Some(crate::models::QuotaData {
+            models: Vec::new(),
+            last_updated: chrono::Utc::now().timestamp(),
+            subscription_tier: None,
+            is_forbidden: true,
+            forbidden_reason: Some(reason.to_string()),
+            model_forwarding_rules: std::collections::HashMap::new(),
+        });
+    }
+
+    // 2. Disable proxy for this account
+    account.proxy_disabled = true;
+    account.proxy_disabled_reason = Some(format!("Forbidden (403): {}", reason));
+    account.proxy_disabled_at = Some(chrono::Utc::now().timestamp());
+
+    save_account(&account)?;
+
+    // 3. Update index summary
+    let mut index = load_account_index()?;
+    if let Some(summary) = index.accounts.iter_mut().find(|a| a.id == account_id) {
+        summary.proxy_disabled = true;
+        save_account_index(&index)?;
+    }
+
+    // 4. Notify frontend to refresh account list
+    crate::modules::log_bridge::emit_accounts_refreshed();
+
+    Ok(())
+}
+
 /// Export accounts by IDs (for backup/migration)
 pub fn export_accounts_by_ids(account_ids: &[String]) -> Result<crate::models::AccountExportResponse, String> {
     use crate::models::{AccountExportItem, AccountExportResponse};
@@ -1346,7 +1601,6 @@ pub fn export_accounts() -> Result<Vec<(String, String)>, String> {
 pub async fn fetch_quota_with_retry(account: &mut Account) -> crate::error::AppResult<QuotaData> {
     use crate::error::AppError;
     use crate::modules::oauth;
-    use reqwest::StatusCode;
 
     // 1. Time-based check - ensure Token is valid first
     let token = match oauth::ensure_fresh_token(&account.token, Some(&account.id)).await {
@@ -1447,9 +1701,11 @@ pub async fn fetch_quota_with_retry(account: &mut Account) -> crate::error::AppR
                 ));
 
                 // Force refresh
-                let token_res = match oauth::refresh_access_token(&account.token.refresh_token, Some(&account.id))
-                    .await
-                {
+                let token_res = match oauth::refresh_access_token_with_client(
+                    &account.token.refresh_token,
+                    Some(&account.id),
+                    account.token.oauth_client_key.as_deref(),
+                ).await {
                     Ok(t) => t,
                     Err(e) => {
                         if e.contains("invalid_grant") {
@@ -1474,6 +1730,14 @@ pub async fn fetch_quota_with_retry(account: &mut Account) -> crate::error::AppR
                     account.token.email.clone(),
                     account.token.project_id.clone(), // Keep original project_id
                     None,                             // Add None as session_id
+                    account.token.is_gcp_tos,
+                    token_res.id_token.clone(),
+                )
+                .with_oauth_client_key(
+                    token_res
+                        .oauth_client_key
+                        .clone()
+                        .or_else(|| account.token.oauth_client_key.clone()),
                 );
 
                 // Re-fetch display name
@@ -1522,13 +1786,52 @@ pub async fn fetch_quota_with_retry(account: &mut Account) -> crate::error::AppR
                         }
                     }
                 }
-                return retry_result.map(|(q, _)| q);
+
+                match retry_result {
+                    Ok((q, _)) => {
+                        clear_validation_blocked(account);
+                        return Ok(q);
+                    }
+                    Err(e) => {
+                        if is_validation_required_error(&e) {
+                            mark_validation_blocked(account, &e.to_string());
+                        }
+                        if let Some(cached) = recover_cached_quota_on_rate_limit(account, &e) {
+                            mark_validation_blocked(account, &format_rate_limit_block_reason(&e));
+                            modules::logger::log_warn(&format!(
+                                "Quota API rate-limited for {}, using cached model list as fallback",
+                                account.email
+                            ));
+                            return Ok(cached);
+                        }
+                        return Err(e);
+                    }
+                }
             }
         }
     }
 
-    // fetch_quota already handles 403, just return mapping result
-    result.map(|(q, _)| q)
+    // fetch_quota already handles 403, with additional local fallback/validation handling.
+    match result {
+        Ok((q, _)) => {
+            clear_validation_blocked(account);
+            Ok(q)
+        }
+        Err(e) => {
+            if is_validation_required_error(&e) {
+                mark_validation_blocked(account, &e.to_string());
+            }
+            if let Some(cached) = recover_cached_quota_on_rate_limit(account, &e) {
+                mark_validation_blocked(account, &format_rate_limit_block_reason(&e));
+                modules::logger::log_warn(&format!(
+                    "Quota API rate-limited for {}, using cached model list as fallback",
+                    account.email
+                ));
+                return Ok(cached);
+            }
+            Err(e)
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -1559,22 +1862,10 @@ pub async fn refresh_all_quotas_logic() -> Result<RefreshStats, String> {
     let tasks: Vec<_> = accounts
         .into_iter()
         .filter(|account| {
-            if account.disabled || account.proxy_disabled {
-                crate::modules::logger::log_info(&format!(
-                    "  - Skipping {} ({})",
-                    account.email,
-                    if account.disabled { "Disabled" } else { "Proxy Disabled" }
-                ));
-                return false;
-            }
-            // [FIX] Check proxy_disabled status
-            if account.proxy_disabled {
-                crate::modules::logger::log_info(&format!(
-                    "  - Skipping {} (Proxy Disabled)",
-                    account.email
-                ));
-                return false;
-            }
+            // [MOD] Now we allow refreshing disabled and proxy_disabled accounts
+            // to support forced re-sync from UI. 
+            // Only strictly skip forbidden accounts if necessary, but even those 
+            // might want a retry to see if they are unbanned.
             if let Some(ref q) = account.quota {
                 if q.is_forbidden {
                     crate::modules::logger::log_info(&format!(
@@ -1640,9 +1931,10 @@ pub async fn refresh_all_quotas_logic() -> Result<RefreshStats, String> {
     ));
 
     // After quota refresh, immediately check and trigger warmup for recovered models
-    tokio::spawn(async {
-        check_and_trigger_warmup_for_recovered_models().await;
-    });
+    // [Disabled] Automatic warmup is temporarily disabled
+    // tokio::spawn(async {
+    //     check_and_trigger_warmup_for_recovered_models().await;
+    // });
 
     Ok(RefreshStats {
         total,

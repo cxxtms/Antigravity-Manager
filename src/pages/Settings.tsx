@@ -7,7 +7,7 @@ import { AppConfig } from '../types/config';
 import ModalDialog from '../components/common/ModalDialog';
 import { showToast } from '../components/common/ToastContainer';
 import QuotaProtection from '../components/settings/QuotaProtection';
-import SmartWarmup from '../components/settings/SmartWarmup';
+// import SmartWarmup from '../components/settings/SmartWarmup';
 import PinnedQuotaModels from '../components/settings/PinnedQuotaModels';
 import { useDebugConsole } from '../stores/useDebugConsole';
 
@@ -162,8 +162,7 @@ function Settings() {
                 return;
             }
 
-            // 强制开启后台自动刷新，确保联动逻辑生效
-            await saveConfig({ ...formData, auto_refresh: true });
+            await saveConfig(formData);
             showToast(t('common.saved'), 'success');
 
             // 如果修改了代理配置，提示用户需要重启
@@ -218,6 +217,21 @@ function Settings() {
             });
             if (selected && typeof selected === 'string') {
                 setFormData({ ...formData, antigravity_executable: selected });
+            }
+        } catch (error) {
+            showToast(`${t('common.error')}: ${error}`, 'error');
+        }
+    };
+
+    const handleSelectAntigravityIdePath = async () => {
+        try {
+            const selected = await open({
+                directory: false,
+                multiple: false,
+                title: t('settings.advanced.antigravity_ide_path_select', 'Select Antigravity IDE Executable'),
+            });
+            if (selected && typeof selected === 'string') {
+                setFormData({ ...formData, antigravity_ide_executable: selected });
             }
         } catch (error) {
             showToast(`${t('common.error')}: ${error}`, 'error');
@@ -707,9 +721,9 @@ function Settings() {
                                             type="number"
                                             className="w-24 px-3 py-2 bg-gray-50 dark:bg-base-200 border border-gray-100 dark:border-base-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm font-bold text-blue-600 dark:text-blue-400"
                                             min="1"
-                                            max="60"
+                                            max="35791"
                                             value={formData.refresh_interval}
-                                            onChange={(e) => setFormData({ ...formData, refresh_interval: parseInt(e.target.value) })}
+                                            onChange={(e) => setFormData({ ...formData, refresh_interval: isNaN(parseInt(e.target.value)) ? 1 : Math.min(Math.max(parseInt(e.target.value), 1), 35791) })}
                                         />
                                     </div>
                                 </div>
@@ -745,16 +759,16 @@ function Settings() {
                                             type="number"
                                             className="w-24 px-3 py-2 bg-gray-50 dark:bg-base-200 border border-gray-100 dark:border-base-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-bold text-emerald-600 dark:text-emerald-400"
                                             min="1"
-                                            max="60"
+                                            max="35791"
                                             value={formData.sync_interval}
-                                            onChange={(e) => setFormData({ ...formData, sync_interval: parseInt(e.target.value) })}
+                                            onChange={(e) => setFormData({ ...formData, sync_interval: isNaN(parseInt(e.target.value)) ? 1 : Math.min(Math.max(parseInt(e.target.value), 1), 35791) })}
                                         />
                                     </div>
                                 )}
                             </div>
 
-                            {/* 智能预热 (Smart Warmup) */}
-                            <div className="group bg-white dark:bg-base-100 rounded-xl p-5 border border-gray-100 dark:border-base-200 hover:border-orange-200 transition-all duration-300 shadow-sm">
+                            {/* 智能预热 (Smart Warmup) - [DISABLED] Backend scheduler commented out as per user request */}
+                            {/* <div className="group bg-white dark:bg-base-100 rounded-xl p-5 border border-gray-100 dark:border-base-200 hover:border-orange-200 transition-all duration-300 shadow-sm">
                                 <SmartWarmup
                                     config={formData.scheduled_warmup}
                                     onChange={async (newConfig) => {
@@ -771,7 +785,7 @@ function Settings() {
                                         }
                                     }}
                                 />
-                            </div>
+                            </div> */}
 
                             {/* 配额保护 (Quota Protection) */}
                             <div className="group bg-white dark:bg-base-100 rounded-xl p-5 border border-gray-100 dark:border-base-200 hover:border-rose-200 transition-all duration-300 shadow-sm">
@@ -921,6 +935,45 @@ function Settings() {
                                     </div>
                                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                                         {t('settings.advanced.antigravity_path_desc')}
+                                    </p>
+                                </div>
+
+                                {/* Antigravity IDE 程序路径 */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-900 dark:text-base-content mb-1">
+                                        {t('settings.advanced.antigravity_ide_path', 'Antigravity IDE Path')}
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            className="flex-1 px-4 py-4 border border-gray-200 dark:border-base-300 rounded-lg bg-gray-50 dark:bg-base-200 text-gray-900 dark:text-base-content font-medium"
+                                            value={formData.antigravity_ide_executable || ''}
+                                            placeholder={t('settings.advanced.antigravity_ide_path_placeholder', 'D:\\Antigravity\\Antigravity.exe')}
+                                            onChange={(e) => setFormData({ ...formData, antigravity_ide_executable: e.target.value })}
+                                        />
+                                        {formData.antigravity_ide_executable && (
+                                            <button
+                                                className="px-4 py-2 border border-gray-200 dark:border-base-300 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                                                onClick={() => setFormData({ ...formData, antigravity_ide_executable: undefined })}
+                                            >
+                                                {t('common.clear')}
+                                            </button>
+                                        )}
+                                        {isTauri() ? (
+                                            <button
+                                                className="px-4 py-2 border border-gray-200 dark:border-base-300 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-base-200 transition-colors"
+                                                onClick={handleSelectAntigravityIdePath}
+                                            >
+                                                {t('settings.advanced.select_btn')}
+                                            </button>
+                                        ) : (
+                                            <span className="self-center text-xs text-gray-400 dark:text-gray-500 italic px-2">
+                                                {t('settings.web_mode_limitation', '(Web 模式不支持)')}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                        {t('settings.advanced.antigravity_ide_path_desc', 'Specify the executable path for Antigravity IDE (code editor). Once set, account switching will strictly protect processes at this path from being terminated.')}
                                     </p>
                                 </div>
 
@@ -1254,7 +1307,7 @@ function Settings() {
                                     <div>
                                         <h3 className="text-3xl font-black text-gray-900 dark:text-base-content tracking-tight mb-2">{t('common.app_name', 'Antigravity Tools')}</h3>
                                         <div className="flex items-center justify-center gap-2 text-sm">
-                                            v4.1.21
+                                            v4.2.1
                                             <span className="text-gray-400 dark:text-gray-600">•</span>
                                             <span className="text-gray-500 dark:text-gray-400">{t('settings.branding.subtitle')}</span>
                                         </div>

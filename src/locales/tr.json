@@ -1,4 +1,4 @@
-{
+﻿{
     "common": {
         "empty": "Boş",
         "loading": "Yükleniyor...",
@@ -156,6 +156,8 @@
         "last_used": "Son Kullanım",
         "reset_time": "Sıfırlama Zamanı",
         "switch_to": "Bu hesaba geç",
+        "switch_to_classic": "Antigravity (Klasik) sürümüne geç",
+        "switch_to_ide": "Antigravity IDE sürümüne geç",
         "actions": "İşlemler",
         "device_fingerprint": "Cihaz Parmak İzi",
         "show_all_quotas": "Tüm kotaları göster",
@@ -396,6 +398,10 @@
             "antigravity_path_desc": "Antigravity'yi standart olmayan bir konuma yüklediyseniz, buradan çalıştırılabilir dosya yolunu manuel olarak belirtebilirsiniz (MacOS'ta .app'i işaret eder).",
             "antigravity_path_select": "Antigravity Çalıştırılabilir Dosyasını Seç",
             "antigravity_path_detected": "Algılanan yol güncellendi",
+            "antigravity_ide_path": "Antigravity IDE Yolu",
+            "antigravity_ide_path_placeholder": "D:\\Antigravity\\Antigravity.exe",
+            "antigravity_ide_path_desc": "Antigravity IDE (kod düzenleyici) çalıştırılabilir dosya yolunu belirtin. Ayarlandığında, hesap değiştirme bu yoldaki süreçleri yanlışlıkla kapatılmaktan koruyacaktır.",
+            "antigravity_ide_path_select": "Antigravity IDE Çalıştırılabilir Dosyasını Seç",
             "detect_btn": "Algıla",
             "antigravity_args": "Antigravity Başlangıç Parametreleri",
             "antigravity_args_placeholder": "--user-data-dir=/path/to/data --some-other-flag",
@@ -797,15 +803,6 @@
             "restore_defaults": "Varsayılan Yapılandırmayı Geri Yükle",
             "reset_all": "Tümünü Sıfırla"
         },
-        "models": {
-            "flash": "Ultra-hızlı",
-            "flash_thinking": "Düşünme Yeteneği",
-            "pro_high": "En İyi Akıl Yürütme",
-            "pro_low": "Düşük Kota",
-            "sonnet": "Kod Akıl Yürütme",
-            "sonnet_thinking": "Düşünce Zinciri",
-            "opus_thinking": "En Güçlü Düşünme"
-        },
         "router": {
             "title": "Model Yönlendirici",
             "subtitle": "Modelleri serilere göre yönlendirin veya özel tam eşlemeler ekleyin.\nNot: Yerel Claude geçiş modelleri (örn. claude-opus-4-6-thinking) varsayılan olarak seri gruplarını atlar. Geçersiz kılmak için \"Uzman Özel Yönlendirme\" kullanın.",
@@ -818,10 +815,6 @@
             "presets_applied": "Ön ayarlar başarıyla uygulandı",
             "custom_mappings": "Özel Eşlemeler",
             "group_title": "Seri Grupları",
-            "gemini3_group_label": "Gemini 3 (Önerilen)",
-            "gemini3_option_high": "gemini-3-pro-high (Yüksek Kalite)",
-            "gemini3_option_low": "gemini-3-pro-low (Dengeli)",
-            "gemini3_option_flash": "gemini-3-flash (Hızlı)",
             "groups": {
                 "claude_45": {
                     "name": "Claude 4.6 TK Serisi",

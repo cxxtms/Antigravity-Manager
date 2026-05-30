@@ -1,4 +1,4 @@
-{
+﻿{
     "common": {
         "loading": "جاري التحميل...",
         "load_more": "تحميل المزيد",
@@ -162,6 +162,8 @@
         "last_used": "آخر استخدام",
         "reset_time": "وقت إعادة التعيين",
         "switch_to": "التبديل لهذا الحساب",
+        "switch_to_classic": "التبديل إلى Antigravity (الكلاسيكي)",
+        "switch_to_ide": "التبديل إلى Antigravity IDE",
         "actions": "إجراءات",
         "device_fingerprint": "بصمة الجهاز",
         "show_all_quotas": "إظهار جميع الحصص",
@@ -433,6 +435,10 @@
             "antigravity_path_desc": "إذا قمت بتثبيت Antigravity في موقع غير قياسي، يمكنك تحديد مسار الملف التنفيذي يدويًا هنا (يشير إلى .app على macOS).",
             "antigravity_path_select": "تحديد تنفيذي Antigravity",
             "antigravity_path_detected": "تم تحديث المسار المكتشف",
+            "antigravity_ide_path": "مسار Antigravity IDE",
+            "antigravity_ide_path_placeholder": "D:\\Antigravity\\Antigravity.exe",
+            "antigravity_ide_path_desc": "حدد مسار الملف التنفيذي لـ Antigravity IDE (محرر الأكواد). بعد التعيين، سيتم حماية العمليات في هذا المسار بشكل صارم من الإنهاء عند تبديل الحسابات.",
+            "antigravity_ide_path_select": "اختيار ملف Antigravity IDE التنفيذي",
             "detect_btn": "كشف",
             "antigravity_args": "وسائط بدء Antigravity",
             "antigravity_args_placeholder": "--user-data-dir=/path/to/data --some-other-flag",
@@ -826,15 +832,6 @@
             "restore_defaults": "استعادة التكوين الافتراضي",
             "reset_all": "إعادة تعيين الكل"
         },
-        "models": {
-            "flash": "فائق السرعة",
-            "flash_thinking": "قدرة التفكير",
-            "pro_high": "أفضل منطق",
-            "pro_low": "حصة منخفضة",
-            "sonnet": "تفكير برمجي",
-            "sonnet_thinking": "سلسلة أفكار",
-            "opus_thinking": "أقوى تفكير"
-        },
         "router": {
             "title": "موجه النماذج",
             "subtitle": "توجيه النماذج حسب السلسلة أو إضافة تعيينات دقيقة مخصصة.\nملاحظة: نماذج Claude الأصلية الممرة (مثل claude-opus-4-6-thinking) تتخطى مجموعات السلسلة افتراضيًا. استخدم \"توجيه مخصص خبير\" للتجاوز.",
@@ -847,10 +844,6 @@
             "presets_applied": "تم تطبيق الإعدادات المسبقة بنجاح",
             "custom_mappings": "تعيينات مخصصة",
             "group_title": "مجموعات السلاسل",
-            "gemini3_group_label": "Gemini 3 (موصى به)",
-            "gemini3_option_high": "gemini-3-pro-high (جودة عالية)",
-            "gemini3_option_low": "gemini-3-pro-low (متوازن)",
-            "gemini3_option_flash": "gemini-3-flash (سريع)",
             "groups": {
                 "claude_45": {
                     "name": "سلسلة Claude 4.6 TK",

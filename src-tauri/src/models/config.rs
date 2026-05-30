@@ -15,6 +15,7 @@ pub struct AppConfig {
     #[serde(default)]
     pub proxy: ProxyConfig,
     pub antigravity_executable: Option<String>, // [NEW] Manually specified Antigravity executable path
+    pub antigravity_ide_executable: Option<String>, // [NEW] Manually specified Antigravity IDE executable path
     pub antigravity_args: Option<Vec<String>>, // [NEW] Antigravity startup arguments
     #[serde(default)]
     pub auto_launch: bool,  // Launch on startup
@@ -76,7 +77,7 @@ pub struct QuotaProtectionConfig {
     /// Reserved quota percentage (1-99)
     pub threshold_percentage: u32,
 
-    /// List of monitored models (e.g. gemini-3-flash, gemini-3-pro-high, claude-sonnet-4-5)
+    /// List of monitored models (e.g. gemini-3-flash, gemini-3-pro-high, gemini-3.1-pro-high, claude-sonnet-4-6)
     #[serde(default = "default_monitored_models")]
     pub monitored_models: Vec<String>,
 }
@@ -119,7 +120,7 @@ fn default_pinned_models() -> Vec<String> {
         "gemini-3-pro-high".to_string(),
         "gemini-3-flash".to_string(),
         "gemini-3-pro-image".to_string(),
-        "claude-sonnet-4-5-thinking".to_string(),
+        "claude-sonnet-4-6-thinking".to_string(),
     ]
 }
 
@@ -180,6 +181,7 @@ impl AppConfig {
             default_export_path: None,
             proxy: ProxyConfig::default(),
             antigravity_executable: None,
+            antigravity_ide_executable: None,
             antigravity_args: None,
             auto_launch: false,
             scheduled_warmup: ScheduledWarmupConfig::default(),

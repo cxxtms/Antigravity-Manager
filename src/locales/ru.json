@@ -1,4 +1,4 @@
-{
+﻿{
     "common": {
         "empty": "Пусто",
         "loading": "Загрузка...",
@@ -158,6 +158,8 @@
         "last_used": "Последнее использование",
         "reset_time": "Время сброса",
         "switch_to": "Переключить на этот аккаунт",
+        "switch_to_classic": "Переключить на Antigravity (Классическая)",
+        "switch_to_ide": "Переключить на Antigravity IDE",
         "actions": "Действия",
         "device_fingerprint": "Отпечаток Устройства",
         "show_all_quotas": "Показать все квоты",
@@ -430,6 +432,10 @@
             "antigravity_path_desc": "Если вы установили Antigravity в нестандартное место, вы можете вручную указать путь к исполняемому файлу здесь (Указывает на .app на macOS).",
             "antigravity_path_select": "Выбрать исполняемый файл Antigravity",
             "antigravity_path_detected": "Обнаруженный путь обновлен",
+            "antigravity_ide_path": "Путь к Antigravity IDE",
+            "antigravity_ide_path_placeholder": "D:\\Antigravity\\Antigravity.exe",
+            "antigravity_ide_path_desc": "Укажите путь к исполняемому файлу Antigravity IDE (редактор кода). После настройки переключение аккаунтов будет строго защищать процессы по этому пути от завершения.",
+            "antigravity_ide_path_select": "Выбрать исполняемый файл Antigravity IDE",
             "detect_btn": "Обнаружить",
             "antigravity_args": "Аргументы запуска Antigravity",
             "antigravity_args_placeholder": "--user-data-dir=/path/to/data --some-other-flag",
@@ -822,15 +828,6 @@
             "restore_defaults": "Восстановить конфигурацию по умолчанию",
             "reset_all": "Сбросить все"
         },
-        "models": {
-            "flash": "Сверхбыстрая",
-            "flash_thinking": "Способность размышления",
-            "pro_high": "Лучшее мышление",
-            "pro_low": "Низкая квота",
-            "sonnet": "Кодовое мышление",
-            "sonnet_thinking": "Цепочка рассуждений",
-            "opus_thinking": "Сильнейшее мышление"
-        },
         "router": {
             "title": "Маршрутизатор моделей",
             "subtitle": "Маршрутизировать модели по сериям или добавить пользовательские точные отображения.\nПримечание: Нативные модели проходного Claude (например, claude-opus-4-6-thinking) по умолчанию обходят группы серий. Используйте \"Экспертную пользовательскую маршрутизацию\" для переопределения.",
@@ -843,10 +840,6 @@
             "presets_applied": "Пресеты успешно применены",
             "custom_mappings": "Пользовательские отображения",
             "group_title": "Группы серий",
-            "gemini3_group_label": "Gemini 3 (Рекомендуется)",
-            "gemini3_option_high": "gemini-3-pro-high (Высокое качество)",
-            "gemini3_option_low": "gemini-3-pro-low (Сбалансированный)",
-            "gemini3_option_flash": "gemini-3-flash (Быстрый)",
             "groups": {
                 "claude_45": {
                     "name": "Серия Claude 4.6 TK",

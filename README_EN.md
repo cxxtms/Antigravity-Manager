@@ -1,5 +1,5 @@
 # Antigravity Tools 🚀
-> Professional AI Account Management & Protocol Proxy System (v4.1.21)
+> Professional AI Account Management & Protocol Proxy System (v4.2.1)
 
 <div align="center">
   <img src="public/icon.png" alt="Antigravity Logo" width="120" height="120" style="border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
@@ -9,7 +9,7 @@
   
   <p>
     <a href="https://github.com/lbjlaq/Antigravity-Manager">
-      <img src="https://img.shields.io/badge/Version-4.1.21-blue?style=flat-square" alt="Version">
+      <img src="https://img.shields.io/badge/Version-4.2.1-blue?style=flat-square" alt="Version">
     </a>
     <img src="https://img.shields.io/badge/Tauri-v2-orange?style=flat-square" alt="Tauri">
     <img src="https://img.shields.io/badge/Backend-Rust-red?style=flat-square" alt="Rust">
@@ -43,6 +43,11 @@ By leveraging this app, you can transform common Web Sessions (Google/Anthropic)
 | :---: | :--- |
 | <img src="docs/images/packycode_logo.png" width="200" alt="PackyCode Logo"> | Thanks to **PackyCode** for sponsoring this project! PackyCode is a reliable and efficient API relay service provider, offering relays for various services such as Claude Code, Codex, and Gemini. PackyCode provides a special offer for users of this project: Register using [this link](https://www.packyapi.com/register?aff=Ctrler) and enter the **"Ctrler"** coupon code when topping up to enjoy a **10% discount**. |
 | <img src="docs/images/AICodeMirror.jpg" width="200" alt="AICodeMirror Logo"> | Thanks to **AICodeMirror** for sponsoring this project! AICodeMirror provides official high-stability relay services for Claude Code / Codex / Gemini CLI, supporting enterprise-grade concurrency, fast invoicing, and 24/7 dedicated technical support. Claude Code / Codex / Gemini official channels at 38% / 2% / 9% of original price, with extra discounts on top-ups! AICodeMirror offers special benefits for Antigravity-Manager users: register via [this link](https://www.aicodemirror.com/register?invitecode=MV5XUM) to enjoy 20% off your first top-up, and enterprise customers can get up to 25% off! |
+| <img src="https://coder.visioncoder.cn/logo.png" width="200" alt="VisionCoder Logo"> | Thanks to **VisionCoder** for supporting this project. [VisionCoder Developer Platform](https://coder.visioncoder.cn) is a reliable and efficient API relay service provider, offering access to mainstream AI models such as Claude Code, Codex, and Gemini. It helps developers and teams integrate AI capabilities more easily and improve productivity. **VisionCoder** is offering a limited-time [Token Plan](https://coder.visioncoder.cn) promotion for our users: register via [this link](https://coder.visioncoder.cn) and buy **1 month to get 1 month** free. |
+| <img src="docs/images/hvoy.png" width="200" alt="hvoy.ai Logo"> | Thanks to **hvoy.ai** for sponsoring this project! [hvoy.ai](https://hvoy.ai/?source=am) is a one-stop AI API service free testing and relay station navigation platform. With comprehensive inclusion and real-time data detection, it has become the preferred tool for many technical teams and enterprises during selection. The platform has aggregated hundreds of relay stations and continuously monitors the performance of dozens of sites across various dimensions, providing objective and transparent basis for relay service selection and helping users avoid pitfalls. Users in need of AI API services can visit [hvoy.ai](https://hvoy.ai/?source=am) to experience it. |
+| <img src="docs/images/APIKEYFUN.png" width="200" alt="APIKEYFUN Logo"> | Thanks to **APIKEY.FUN** for sponsoring this project! APIKEY.FUN is a professional enterprise-grade AI relay station, dedicated to providing stable, efficient, and low-cost AI model API access services for enterprise and individual developers. The platform supports mainstream popular models such as Claude, OpenAI, and Gemini, with prices as low as 7% of the official original price. Register through [this exclusive link](https://apikey.fun/register?aff=Ctrler) for this project to enjoy an exclusive offer of up to **permanent 5% off on top-ups**. |
+
+
 
 ### ☕ Support
 
@@ -53,6 +58,12 @@ If you find this project helpful, feel free to buy me a coffee!
 | Alipay | WeChat Pay | Buy Me a Coffee |
 | :---: | :---: | :---: |
 | ![Alipay](./docs/images/donate_alipay.png) | ![WeChat](./docs/images/donate_wechat.png) | ![Coffee](./docs/images/donate_coffee.png) |
+
+## 🚀 Recommended Projects
+
+If you like this project, you might also be interested in:
+
+*   **[Antigravity-Tools-LS](https://github.com/lbjlaq/Antigravity-Tools-LS)**: A Language Server Protocol (LSP) designed for AI protocols, providing you with smarter code completion, diagnostics, and protocol debugging experiences.
 
 ## 🌟 Detailed Feature Matrix
 
@@ -122,7 +133,7 @@ Automatically detects your OS, architecture, and package manager — one command
 
 **Linux / macOS:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/lbjlaq/Antigravity-Manager/v4.1.21/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/lbjlaq/Antigravity-Manager/v4.2.1/install.sh | bash
 ```
 
 **Windows (PowerShell):**
@@ -132,7 +143,7 @@ irm https://raw.githubusercontent.com/lbjlaq/Antigravity-Manager/main/install.ps
 
 > **Supported formats**: Linux (`.deb` / `.rpm` / `.AppImage`) | macOS (`.dmg`) | Windows (NSIS `.exe`)
 >
-> **Advanced usage**: Install a specific version `curl -fsSL ... | bash -s -- --version 4.1.21`, dry-run mode `curl -fsSL ... | bash -s -- --dry-run`
+> **Advanced usage**: Install a specific version `curl -fsSL ... | bash -s -- --version 4.2.1`，dry-run mode `curl -fsSL ... | bash -s -- --dry-run`
 
 #### macOS - Homebrew
 If you have [Homebrew](https://brew.sh/) installed, you can also install via:
@@ -283,6 +294,191 @@ print(response.choices[0].message.content)
 ## 📝 Developer & Community
 
 *   **Changelog**:
+    *   **v4.2.1 (2026-05-20)**:
+        -   **[Core Fix] Windows Process Segregation & Precision Termination (Windows Process Segregation)**:
+            -   **Bug Fix**: Resolved an issue on Windows where switching accounts or closing applications resulted in accidental process termination of both Antigravity Classic and Antigravity IDE due to fuzzy process name matching.
+            -   **Strict Path Matching**: Introduced a strict filtering mechanism based on the absolute path of the executable (`canonicalize()`). When custom paths are configured, the system executes targeted process control matching the path rather than relying on process names.
+            -   **⚠️ Important Note**: Windows users are **strongly advised** to configure custom executable paths for both Classic (`antigravity_executable`) and IDE (`antigravity_ide_executable`) versions under **Settings -> Advanced Settings**. Without these settings, the system will fall back to fuzzy process name matching, which may cause unexpected program closures when switching accounts.
+    *   **v4.2.0 (2026-05-20)**:
+        -   **[Core Feature] Brand New Antigravity IDE Account Switching & Independent Dual Switching Buttons**:
+            -   **Dual-Channel One-Click Switch**: Added a dedicated, **independent switching button** for the new IDE version in the Account Management actions panel, alongside the existing Classic switch, allowing direct, parallel account switching from a single dashboard.
+            -   **Physical Isolation & Multi-Version Coexistence**: Achieved strict physical path isolation for runtime data, `state.vscdb` databases, and configuration settings, ensuring Classic and IDE settings coexist harmoniously and conflict-free.
+            -   **Intelligent Process Evading**: Refactored the Rust process supervisor to precisely terminate and control processes matching the targeted version, completely preventing the IDE module from mistakenly interrupting active Classic backend processes.
+        -   **[Multi-Version Compatibility Refactor] Intelligent Multi-Version Account Switcher & OS Keychain/Keyring Credentials Manager Integration**:
+            -   **Native 2.0.0+ Client Keychain Injection**: Implemented secure OAuth credential serialization into the OS credentials store (Keychain on macOS) formatted as raw Base64 JSON payloads required by the official Go-based >= 2.0.0 client, bypassing old `storage.json` dependencies and completely eliminating previous switching-lock blockings.
+            -   **Cross-Platform Silent Credential Injection**: Outfitted macOS with silent `security` CLI injection backed by `-A` flag authorization, ensuring fully automatic password-less token access; fully supported quiet `cmdkey` scripts for Windows and native Secret Service `secret-tool` utilities for Linux desktops.
+            -   **Version-Aware Detection & Seamless Fallback**: Introduced automatic installed version detection. Gracefully falls back to legacy SQLite injection & service machine ID synchronization paths on detected < 2.0.0 clients to ensure backward compatibility, while keeping the customized Antigravity IDE SQLite pipeline strictly untouched for robust architectural partition.
+        -   **[UX & Animation Upgrade] Distinctive Switching Icons & Silky Clockwise Spin Effects**:
+            -   **Differentiated Brand Icons**: Outfitted the new IDE switcher with a modern geometric **`Repeat2`** vector icon to stand distinct from Classic's `ArrowRightLeft` arrow icon, dramatically enhancing UI visual hierarchy.
+            -   **Silky Spin Animation**: Upgraded the toggling state (isSwitching) transition from standard `animate-pulse` breathing to a snappy, clockwise **`animate-spin`** loop micro-animation for an premium tactile interaction.
+        -   **[i18n Bug Fix] 12-Language Alignment & Fixed Tooltip Hover Fallback**:
+            -   **Translation Alignment**: Fixed a bug where the hover tooltips on the switching buttons fell back to default Chinese under non-Chinese system locales.
+            -   **Full Localizations Coverage**: Added and aligned `accounts.switch_to_classic` and `accounts.switch_to_ide` translation keys across all **12 localization packages** (including `en.json`, `zh.json`, `zh-TW.json`, `ja.json`, `ko.json`, etc.), ensuring accurate globally-localized tooltips.
+    *   **v4.1.33 (2026-05-01)**:
+        -   **[Core Fix] Resolve Antigravity IDE  OAuth Token refresh failure and invalid_grant error.**
+        -   **[Core Fix] Resolve 403 Forbidden errors caused by Project ID conflicts and implement automatic retry/downgrade for enterprise/personal quotas.**
+        -   **[Enhancement] Support automatic compatibility and silent upgrade of old account data, restoring functionality for legacy users without re-login.**
+    *   **v4.1.32 (2026-04-18)**:
+        -   **[Proxy Enhancement] Gemini Proxy Production-Grade Stability Refactoring**:
+            -   **Fingerprint Alignment**: Rewrote `requestId` generation logic to strictly follow the official `agent/{timestamp}/{hex8}` path fingerprint.
+            -   **Trace ID Injection**: Forced injection of `__cloudCodeMeta` trace IDs into OpenAI/Claude protocol mappers for pixel-perfect traffic spoofing.
+            -   **Grace Retry Window**: Implemented a 1500ms grace window for transient errors (10xx/503/529), significantly improving high-concurrency reliability.
+        -   **[Core Fix] Resolve reverse proxy service interception vulnerability (Issue #3027)**:
+            -   Fixed a logic defect where the backend proxy port was active and could handle requests even when the app was started but the "Start" button was not clicked.
+            -   Service initial running status is now defaulted to forbidden; proxy traffic is only allowed after explicit startup (manual or automatic), ensuring strict consistency between UI state and backend logic.
+            -   Management API paths have been exempted to ensure basic management functionality remains unaffected.
+        -   **[Core Fix] Resolve "Status Invalidation" and "Fingerprint Conflict" issues during account switching**:
+            -   **Fingerprint Sync**: Implemented synchronous injection of `serviceMachineId` between disk config and `state.vscdb` database, resolving the persistent issue where VS Code pops up "Environment Changed" and requires re-login after switching accounts.
+            -   **Validation Downgrade**: Weakened the enterprise account pre-check logic. When a `project_id` cannot be automatically resolved, the system now records a warning instead of throwing an error to block the switch, ensuring accounts with restricted permissions can still be switched and used.
+        -   **[Important Note] Account Switching & Risk Advice**:
+            -   **Retry Notice**: If the Antigravity client shows continuous `retry`, please switch to another account.
+            -   **Risk Control Info**: For proxy users, despite the enhancements in this update, using third-party tools may lead to suspension for violating terms of service. If necessary, it is recommended to use Free or Enterprise Free accounts.
+
+        -   **[Recommended Project] Support our new member [Antigravity-Tools-LS](https://github.com/lbjlaq/Antigravity-Tools-LS)**: A Language Server designed for AI protocols, providing the ultimate developer assistance and debugging experience.
+        -   **[Core Fix] Stable Enterprise Switching & Multi OAuth-Client Auth (PR #2330)**:
+            -   **Multi-Client Support**: Introduced support for multiple OAuth-clients and `oauth_client_key` tracking, enabling active switching.
+            -   **Enterprise Mode Enhancement**: Added pre-checks (detecting `project_id`) when switching to enterprise mode and optimized failure prompts.
+            -   **Status Display Optimization**: Improved UI display for abnormal account states such as Verification Required, Risk, and Rate Limited.
+            -   **API Access Fallback**: Added Sandbox -> Daily -> Prod automatic fallback paths for the `fetchAvailableModels` interface, automatically trying alternative environments upon 429 or 5xx errors.
+        -   **[Proxy Fix] Resolve 400 Errors with Gemini v1internal Protocol (PR #2356)**:
+            -   **Conflict Avoidance**: Resolved the limitation where the `v1internal` protocol did not support simultaneous use of `googleSearch` and `functionDeclarations`.
+            -   **Intelligent Injection**: The proxy now automatically skips Google Search tool injection when the request contains function definitions, ensuring request success.
+    *   **v4.1.30 (2026-03-15)**:
+        -   **[Core Optimization] Implementation of multi-level fallback mechanism for fetchAvailableModels (PR #2329)**:
+            -   **Endpoint Fallback Strategy**: Introduced an automatic Sandbox -> Daily -> Prod endpoint fallback mechanism for the `fetchAvailableModels` API. When requests encounter `429 (Too Many Requests)` or `5xx` server errors, the system automatically and smoothly switches to alternative endpoints, significantly improving the stability of quota refreshes and model list retrieval.
+            -   **Logic Alignment**: Aligned the error handling and retry logic for quota acquisition with core API handlers, ensuring consistent behavior of the request pipeline under extreme conditions.
+        -   **[Core Fix] Optimize Gemini SSE Stream Error Handling to Prevent Transfer Encoding Errors (PR #2322)**:
+            -   **Error Encapsulation**: Fixed an issue where Gemini SSE streams would yield raw errors upon upstream failure, causing clients to encounter `TransferEncodingError`. The system now catches stream errors and encapsulates them into standard JSON data frames, ensuring graceful connection closure and clear error feedback to the frontend.
+            -   **Cross-Protocol Alignment**: This fix has been applied to both the Gemini native handler and the Claude protocol mapper, ensuring consistency and robustness across different streaming output paths.
+    *   **v4.1.29 (2026-03-12)**:
+        -   **[IMPORTANT WARNING] Google Risk Control & Third-Party Tool Risks**:
+            -   Due to tightened Google risk control, third-party tools may be suspended for violating Terms of Service when used with Antigravity, Gemini CLI, or Gemini Code Assist.
+            -   Accessing Antigravity, Gemini CLI, or Gemini Code Assist using third-party software, tools, or services (e.g., using OpenClaw and Antigravity OAuth) violates applicable terms and policies. Such actions may lead to account suspension or termination. It is recommended to only use the switching feature.
+            -   **Appeal Link**: If you believe your account was suspended by mistake, please submit an appeal via [this link](https://forms.gle/hGzM9MEUv2azZsrb9).
+            -   Stay tuned to our [Telegram Channel](https://t.me/AntigravityManager) for latest updates.
+            -   ![Risk Warning](docs/images/CleanShot%202026-03-12%20at%2009.34.34@2x.png)
+        -   **[Core Feature] Account-Aware Dynamic Model Remapping & Fallback (PR #2286)**:
+            -   **Dynamic Fallback Logic**: Resolved `404/400` errors caused by inconsistent model tier access (e.g., `high` vs `low`) across different accounts. The system now automatically executes smooth fallbacks between models in the same series (e.g., `gemini-3.1-pro-high` -> `gemini-3.1-pro-low` -> default tier) based on the active account's permissions.
+            -   **Real-time Permission Validation**: Dynamically validates target model availability via account file data before requests enter the handler, achieving true "account-aware" scheduling.
+            -   **Remapping Priority Optimization**: Established a scientific priority chain: `API Deprecation Rules > Account-Aware Fallback > User-Defined Mapping > System Default Mapping`.
+            -   **Documentation Sync**: Added `docs/model-remapping-logic.md` to fully document the complex remapping logic flow.
+        -   **[Core Fix] Enhanced Windows CLI Detection & Path Scanning (PR #2298)**:
+            -   **Active Path Scanning**: Introduced automatic scanning for `APPDATA`, `LOCALAPPDATA`, and `NVM_HOME` to ensure precise identification even if the CLI is not in the system `PATH`.
+            -   **Script Handling Optimization**: Improved invocation of `.cmd` and `.bat` scripts on Windows, resolving issues with unstable version retrieval during direct execution.
+            -   **Security Hardening**: Added path security validation logic with absolute path checks and character filtering to prevent command injection risks.
+        -   **[Continuous Integration] Integrated GitHub Actions CI Workflow (PR #2298)**:
+            -   **Automated Quality Control**: Built a basic CI pipeline covering Rust formatting, linting, and cross-platform compilation tests to enhance code compliance and delivery stability.
+
+    *   **v4.1.28 (2026-03-03)**:
+        -   **[IMPORTANT WARNING] Google Risk Control & Third-Party Tool Risks**:
+            -   Due to tightened Google risk control, third-party tools may be suspended for violating Terms of Service when used with Antigravity, Gemini CLI, or Gemini Code Assist.
+            -   Accessing Antigravity, Gemini CLI, or Gemini Code Assist using third-party software, tools, or services (e.g., using OpenClaw and Antigravity OAuth) violates applicable terms and policies. Such actions may lead to account suspension or termination.
+            -   **Appeal Link**: If you believe your account was suspended by mistake, please submit an appeal via [this link](https://forms.gle/hGzM9MEUv2azZsrb9).
+            -   **Future Plan & Roadmaps**:
+                -   New versions will be pushed in the future (potentially separating account switching and proxy features into independent modules).
+                -   However, due to work commitments, there may be delays. We appreciate your understanding.
+                -   Stay tuned to our WeChat Official Account **Ctrler** or Telegram channel [AntigravityManager](https://t.me/AntigravityManager).
+            -   **Please use this project with caution.**
+        -   **[Core Fix] Normalized Rate Limit Locking Across All Model Series (Fix Issue #2209)**:
+            -   **Unified Normalization**: Fixed an issue where Claude and Gemini models' 429 (Too Many Requests) errors failed to trigger proper locking due to non-normalized limit keys.
+            -   **Enhanced Circuit Breaker Integration**: Ensured the built-in circuit breaker accurately intercepts exhausted accounts using normalized model IDs (e.g., `claude`, `gemini-3-flash`), eliminating redundant 90s wait times even when "Quota Protection" is disabled.
+        -   **[Core Fix] Resolve 400 Errors from Erroneous thinkingLevel Injection in Gemini Adaptive Mode (Fix Issue #2208)**:
+            -   **Root Cause**: Adaptive recognition logic in 4.1.27 misidentified Gemini models (e.g., `gemini-3.1-pro-high`) as supporting `thinkingLevel`, which is exclusive to Vertex AI Claude. Gemini models only accept `thinkingBudget`, causing Google API to reject requests with `400 INVALID_ARGUMENT`.
+            -   **Narrowed Triggers**: Corrected the `thinkingLevel` injection trigger from `contains("gemini-3")` to `contains("claude")`, ensuring it only applies to Claude protocols. Gemini models now correctly fallback to a safe `thinkingBudget: 24576` in adaptive mode.
+        -   **[Core Fix] Resolve Claude Code 4.1.27+ Web Search (Internal Tool) Failure (Issue #2224)**:
+            -   **Hybrid Tool Support**: Overcame Gemini v1internal API limitations regarding concurrent use of `googleSearch` and custom `functionDeclarations`.
+            -   **Intelligent Perception Injection**: Refactored the tool injection engine to automatically enable both built-in search and developer tools on Gemini 2.0+ and 3.0 models.
+            -   **Across-Protocol Alignment**: Applied the fix across OpenAI and Gemini Native protocols to ensure consistent search capabilities for high-performance models.
+        -   **[Core Fix] Resolve 400 Errors from Missing thought_signature in gemini-3-flash Function Calls (Fix Issue #2167)**:
+            -   **Root Cause**: Model recognition failed to include `gemini-3-flash` in the "thinking model" category, leading to missing `thoughtSignature` in initial function calls (no session cache) and causing `400 INVALID_ARGUMENT`.
+            -   **Protocol Fixes**: Added `is_gemini_flash_thinking` logic across OpenAI, Claude, and Gemini Native mappers to automatically inject the `skip_thought_signature_validator` sentinel when the session cache is empty.
+        -   **[Core Fix] Token Statistics Timezone Fix (Fix Issue #2214)**:
+            -   **Automatic Timezone Alignment**: Switched the base time for Token statistics from UTC to system Local Time.
+            -   **Global Multi-timezone Support**: Introduced SQLite `'localtime'` conversion mechanism. Regardless of the user's location, the timeline on statistics charts will automatically align with their system clock, completely resolving data misalignment issues for Beijing Time or other non-UTC timezones.
+    *   **v4.1.27 (2026-03-01)**:
+        -   **[Core Fix] Proxy Config Initialization & Tool Image Preservation (Issue #2156)**:
+            -   **Default Initialization**: Fixed compilation errors caused by missing `global_system_prompt`, `proxy_pool`, and `image_thinking_mode` fields in `ProxyConfig`'s default initialization.
+            -   **Exhaustive Pattern Matching**: Added a catch-all branch (`_ => {}`) in the `OpenAIContentBlock` enum matching, eliminating potential non-exhaustive match compilation errors.
+            -   **Unconditional Image Preservation**: Removed the redundant `preserve_tool_result_images` switch. The image data structure in `tool_result` is now unconditionally retained and formatted as `inlineData` for downstream models, significantly simplifying the underlying logic.
+        -   **[Feature Enhancement] Update docker-compose.yml namespace and default vars (PR #2185)**:
+            -   **Namespace Update**: Changed the default built image name from `antigravity-manager` to `lbjlaq/antigravity-manager`.
+            -   **Env Vars Placeholder**: Added default value placeholders syntax for environment variables to allow overriding via host env vars or `.env` files.
+        -   **[Core Fix] Full Compatibility for OpenCode Thinking Budget Parameters (Issue #2186)**:
+            -   **Architecture Support**: Resolved the issue where Vercel AI SDK (`@ai-sdk/anthropic`) combined with OpenCode would fail to start and throw `AI_UnsupportedFunctionalityError: 'thinking requires a budget'` due to the native snake_case `budget_tokens` naming.
+            -   **Dual-field Output**: Automatically outputs both standard `budget_tokens` and camelCase `budgetTokens` fields when syncing model configurations to externals like OpenCode / Claude CLI.
+            -   **Server-side Adaptation**: Backend config parser now natively supports both variants.
+        -   **[Core Fix] Resolve Infinite Retry and Routing Deadlock for Depleted Free Accounts (Issue #2184)**:
+            -   **Root Cause**: Addressed a defect where the Google API `fetchAvailableModels` did not correctly return `remainingFraction` under specific payloads. Due to a missing `project` identifier, the endpoint inaccurately reported `1.0` (100%) for quota-exhausted accounts (HTTP 429). This caused the smart routing algorithm to persistently assign requests to disabled accounts, leading to prolonged retries and incorrect quota dashboard displays.
+            -   **Payload Correction**: Reconstructed the quota refresh request to accurately inject the `{"project": project_id}` structure into the payload. This restores accurate quota perception and achieves 100% API compatibility without breaking native metadata fields like `supportsThinking`.
+            -   **Smart Self-healing**: By precisely reading accurate quotas, the system now identifies the depleted status of free accounts in real-time, zeroing their availability and seamlessly triggering the multi-account Smart Status Self-healing mechanism to eliminate hangs and timeout issues.
+        -   **[Core Fix] Resolve Gemini Image Average Quota Displaying as 0 on Dashboard (Issue #2160)**:
+            -   **Matching Update**: Updated the image model matching logic in the Dashboard from hardcoded `gemini-3-pro-image` to include the latest `gemini-3.1-flash-image`.
+            -   **Config Sync**: Added UI definitions for the new image model version in `modelConfig.ts`, ensuring icons and labels are rendered correctly.
+    *   **v4.1.26 (2026-02-27)**:
+        -   **[Feature Enhancement] Improved Quota Refresh Logic to Include Disabled Accounts**:
+            -   **Relaxed Filtering**: Both "Refresh All" and batch refresh operations no longer skip accounts marked as `disabled` or `proxy_disabled`.
+            -   **Auto-Recovery**: Enables users to attempt re-activating and syncing accounts that were disabled due to token expiration or temporary errors directly from the UI.
+        -   **[Core Fix] Resolve cmd Black Window Flashing on Windows During Background Tasks**:
+            -   **Silent Execution**: Encapsulated and injected the `CREATE_NO_WINDOW` flag into `std::process::Command`, eliminating the visual distraction of command prompt windows flashing briefly when the app invokes system components (e.g., version probes, auto-updates) on Windows, ensuring completely borderless and silent execution.
+    *   **v4.1.25 (2026-02-27)**:
+        -   **[Core Feature] Dynamic Image Model & New Architecture Support**:
+            -   **Dynamic Parsing**: Removed hardcoded restrictions for `gemini-3-pro-image`. Introduced a `clean_image_model_name` utility to intelligently strip suffixes (e.g., `-4k`, `-16x9`), fully supporting future models like `gemini-3.1-flash-image`.
+            -   **Adaptive Quota**: Optimized `normalize_to_standard_id` to broadly match the `image` keyword, ensuring new models correctly trigger quota protection mechanisms.
+        -   **[Core Feature] Chat Completions Image Interception Support**:
+            -   **Seamless Integration**: Chat streams in OpenAI and Claude protocols now intelligently detect image generation intent. When an `image` model is requested, standard text completion requests are silently redirected to the advanced image engine.
+            -   **Streaming Echo**: Upon completion, the image URL is streamed back in Markdown format (`![Generated Image](url)`), perfectly adapting to all Markdown-supported chat clients.
+        -   **[Core Fix] Resolve Redirect 404 and Parameter Passthrough Failure**:
+            -   **404 Elimination**: Removed residual hardcoded legacy models in underlying calls, eradicating `404 Not Found` crashes and account exhaustion caused by model inconsistencies.
+            -   **Precise Parameter Inheritance**: Fixed the behavior where the system forced a default `1024x1024` when parameters were omitted. Now, if the model has a suffix (e.g., `gemini-3-pro-image-16x9-4k`), the backend strictly parses and prioritizes the suffix resolution for image generation.
+    *   **v4.1.24 (2026-02-26)**:
+        -   **[Feature Adjustment] Disabled Automatic Warmup Scheduler, Retained Manual Warmup**:
+            -   **Change Summary**: To reduce unnecessary background resource usage, the background scheduler for Automatic Warmup (Smart Warmup) has been commented out in this version.
+            -   **UI Hidden**: The "Smart Warmup" configuration section in the Settings page has been hidden.
+            -   **Manual Retained**: Manual warmup functionality in the Account Management page remains fully functional.
+            -   **Restoration Guide**: Users who require automatic warmup can clone the repository and uncomment the `start_scheduler` calls in `src-tauri/src/lib.rs` and the related UI in `Settings.tsx` before rebuilding.
+        -   **[Core Fix] Smart Version Fingerprint Selection & Startup Panic Fix (Issue #2123)**:
+            -   **Root Cause**: 1) `KNOWN_STABLE_VERSION` in `constants.rs` was hardcoded to an outdated version. When local detection failed, this old version was used as `x-client-version`, causing Google to reject Gemini 3.1 Pro requests. 2) The new remote version fetching logic was executed within its `LazyLock` initializer on the main thread (Tokio async context), triggering a `Cannot block the current thread` panic.
+            -   **Fix**: 1) Implemented a "Smart Max Version" strategy: `max(local_version, remote_version, 4.1.27)`. 2) Refactored the network probe to run in a dedicated OS thread over `mpsc` channels, safely bypassing async runtime restrictions. This ensures that the client fingerprint always meets upstream requirements and the application starts reliably.
+        -   **[Core Fix] Dynamic Model maxOutputTokens Limit System (Replaces hardcoded approach in PR #2119)**:
+            -   **Root Cause**: Some clients send `maxOutputTokens` exceeding the physical limits of models (e.g., Flash capped at 64k), causing `400 INVALID_ARGUMENT` from the upstream API.
+            -   **Three-Tier Limit Architecture**:
+                -   **Tier 1 (Dynamic Priority)**: Reads real-time quota data from accounts.
+                -   **Tier 2 (Static Default Table)**: `model_limits.rs` with known defaults (e.g., Flash: 65536).
+                -   **Tier 3 (Global Fallback)**: Default 131072.
+            -   **Implementation Details**: Injected clamping logic in `wrap_request()` to ensure parameter compliance.
+    *   **v4.1.23 (2026-02-25)**:
+        -   **[Security Enhancement] Aligned application-layer and low-level protocol fingerprints with native clients to improve request stability and anti-interception capabilities.**
+        -   **[Core Fix] Resolve Account Data Corruption and Background Task Infinite Loops (PR #2094)**:
+            -   **Root Cause**: When a user enters an excessively large interval value (e.g., 999999999), `interval * 60 * 1000` exceeds the JS engine's signed 32-bit integer limit (`2,147,483,647ms`). The browser silently clamps the `setInterval` delay to 1ms, causing the frontend to fire `refreshAllQuotas`/`syncAccountFromDb` thousands of times per second, flooding the backend with concurrent writes to the same `[uuid].json` file, interleaving byte streams, and permanently corrupting account data.
+            -   **Atomic File Writes (`account.rs`)**: `save_account` now writes to a UUID-suffixed temp file first, then atomically replaces the target via `fs::rename` (POSIX) / `MoveFileExW` (Windows), consistent with the existing `save_account_index` implementation, eliminating race-condition corruption at the source.
+            -   **setInterval Overflow Guard (`BackgroundTaskRunner.tsx`)**: Applied `Math.min(..., 2147483647)` to the computed delay for both the refresh and sync timers, preventing INT32_MAX overflow from silently clamping intervals to 1ms.
+            -   **Input Validation (`Settings.tsx`)**: Updated the `max` attribute for `refresh_interval` and `sync_interval` inputs from `60` to `35791` (35791 min × 60000 < INT32_MAX), and added `NaN` fallback (defaults to 1) with range clamping `[1, 35791]` in `onChange` to block invalid values at the source.
+        -   **[Core Optimization] OAuth Token Exchange Only: Remove JA3 Fingerprinting and Dynamic User-Agent Masking**:
+            -   **Pure Requests**: Specifically for `exchange_code` (initial authorization) and `refresh_access_token` (silent renewal) requests, the Chrome JA3 fingerprint emulation has been removed to revert to standard pure TLS characteristics.
+            -   **Dynamic UA**: During token exchange, the system automatically extracts the compiled version (`CURRENT_VERSION`) to construct a dedicated `User-Agent` (e.g., `vscode/1.X.X (Antigravity/4.1.27)`), matching the pure TLS connection.
+        -   **[Feature Enhancement] API Proxy Page and Settings Model Lists Now Fully Dynamic**:
+            -   **Root Cause**: The "API Proxy → Supported Models & Integration" list, the target model dropdown in "Model Router", and the "Settings → Pinned Quota Models" list all previously read only from the static `MODEL_CONFIG`, causing dynamically issued models (e.g., `GPT-OSS 120B`, `Gemini 3.1 Pro (High)`) to never appear in these lists.
+            -   **Fix**:
+                -   Refactored the `useProxyModels` Hook: account `quota.models` dynamic data is now the primary data source, aggregating `display_name` (as the primary label) and `name` (as the model ID) across all accounts; `MODEL_CONFIG` is used only for icon/group styling and as a static fallback when no account data is available.
+                -   Added automatic lazy-loading: since `ApiProxy` itself does not call `fetchAccounts`, the Hook now auto-triggers a fetch when the store is empty, ensuring dynamic models appear regardless of the navigation path.
+                -   Refactored `PinnedQuotaModels` component: applies the same strategy and fixes the issue where previously-pinned "thinking" models displayed as "Unknown", now correctly resolving their real `display_name`.
+            -   **Deduplication**: All lists deduplicate by original `name` (lowercase) and additionally filter out `-thinking` suffix entries from `MODEL_CONFIG` (these variants are already covered by the `supports_thinking` flag in account data).
+    *   **v4.1.22 (2026-02-21)**:
+        -   **[Important Warning] 2api Risk Control Alert**:
+            -   Due to recent Google risk control measures, utilizing 2api features significantly increases the probability of your account being flagged.
+            -   **Highly Recommended**: To ensure account safety and interaction stability, we strongly advise reducing or discontinuing the use of 2api features. Support for the more native and stable **gRPC (`application/grpc`)** or **gRPC-Web (`application/grpc-web`)** protocols is currently under active testing. If you have any testing experience, ideas, or suggestions, please feel free to reach out for a discussion, or create a new branch to explore with us!
+            -   <details><summary>📸 View gRPC to OpenAI Proxy Test Screenshot</summary><img src="docs/images/usage/grpc-test.png" alt="gRPC Test" width="600"></details>
+        -   **[Core Optimization] Claude Sonnet 4.5 to 4.6 Migration (PR #2014)**:
+            -   **Model Upgrade**: Introduced `claude-sonnet-4-6` and `claude-sonnet-4-6-thinking` as primary models.
+            -   **Seamless Transition**: Automatically redirect `claude-sonnet-4-5` (legacy) to `4.6`.
+            -   **Universal Alignment**: Updated all 12 locale files, UI labels (Sonnet 4.6, Sonnet 4.6 TK, Opus 4.6 TK), and proxy presets.
+        -   **[Core Optimization] Gemini Pro Model Migration (PR #2063)**: Migrated `gemini-pro-high/low` to `gemini-3.1-pro` to align with the latest Google API naming conventions.
+        -   **[Core Architecture] i18n Framework & Structured Model Configuration (PR #2040)**:
+            -   **Reconstruction**: Introduced a new i18n translation framework, decoupling hardcoded model display logic into a structured `MODEL_CONFIG`.
+            -   **Logic Adaptation**: Integrated dynamic deduplication based on i18n tags across account tables, detail dialogs, and settings, resolving the persistent Gemini 3.1 Pro quota duplication issue.
+            -   **Localization Polish**: Optimized and corrected version descriptions across all 12 locales, upgrading `Claude 4.5` to the official `4.6` version and unifying `G3` references to `G3.1`.
+        -   **[Core Fix] Claude Opus 4.6 Thinking Mode 400 Error (Claude Protocol)**:
+            -   **Parameter Alignment**: Fixed the `400 INVALID_ARGUMENT` error return for `claude-opus-4-6-thinking` under the Claude protocol. By enforcing alignment of `thinkingBudget` (24576) and `maxOutputTokens` (57344), and removing incompatible `stopSequences` in this mode, ensuring request parameters are 100% consistent with the successful OpenAI protocol. This improves compatibility with native Claude protocol clients.
     *   **v4.1.21 (2026-02-17)**:
         -   **[Core Fix] Cherry Studio / Claude Protocol Compatibility (Fix Issue #2007)**:
             -   **maxOutputTokens Capping**: Fixed `400 INVALID_ARGUMENT` errors caused by Cherry Studio sending excessive `maxOutputTokens` (128k). The system now automatically caps Claude protocol output to **65536**, ensuring requests remain within Gemini's limits.

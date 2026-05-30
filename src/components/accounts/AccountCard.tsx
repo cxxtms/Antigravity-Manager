@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { ArrowRightLeft, RefreshCw, Trash2, Download, Info, Lock, Ban, Diamond, Gem, Circle, ToggleLeft, ToggleRight, Fingerprint, Sparkles, Tag, X, Check } from 'lucide-react';
+import { ArrowRightLeft, RefreshCw, Trash2, Download, Info, Lock, Ban, Diamond, Gem, Circle, ToggleLeft, ToggleRight, Fingerprint, Sparkles, Tag, X, Check, Clock, Bot, Repeat2 } from 'lucide-react';
 import { Account } from '../../types/account';
 import { cn } from '../../utils/cn';
 import { useTranslation } from 'react-i18next';
 import { useConfigStore } from '../../stores/useConfigStore';
 import { QuotaItem } from './QuotaItem';
 import { MODEL_CONFIG, sortModels } from '../../config/modelConfig';
+import { getValidationBlockedStatusLabel } from './accountValidationStatus';
 
 interface AccountCardProps {
     account: Account;
@@ -14,7 +15,7 @@ interface AccountCardProps {
     isCurrent: boolean;
     isRefreshing: boolean;
     isSwitching?: boolean;
-    onSwitch: () => void;
+    onSwitch: (targetIde?: string) => void;
     onRefresh: () => void;
     onViewDevice: () => void;
     onViewDetails: () => void;
@@ -38,6 +39,7 @@ function AccountCard({ account, selected, onSelect, isCurrent: propIsCurrent, is
     const { t } = useTranslation();
     const { config, showAllQuotas } = useConfigStore();
     const isDisabled = Boolean(account.disabled);
+    const validationBlockedLabel = getValidationBlockedStatusLabel(account.validation_blocked_reason, t);
 
     // 自定义标签编辑状态
     const [isEditingLabel, setIsEditingLabel] = useState(false);
@@ -78,9 +80,9 @@ function AccountCard({ account, selected, onSelect, isCurrent: propIsCurrent, is
             const fullConfig = MODEL_CONFIG[m.name.toLowerCase()];
             return {
                 id: m.name,
-                label: fullConfig?.shortLabel || fullConfig?.label || m.name,
-                protectedKey: fullConfig?.protectedKey,
-                Icon: iconMap.get(m.name),
+                label: m.display_name || fullConfig?.shortLabel || fullConfig?.label || m.name,
+                protectedKey: fullConfig?.protectedKey || m.name,
+                Icon: iconMap.get(m.name) || Bot,
                 data: m
             };
         }) || [];
@@ -95,13 +97,14 @@ function AccountCard({ account, selected, onSelect, isCurrent: propIsCurrent, is
             if (pinned && pinned.length > 0) {
                 models = accountModels.filter(m => pinned.includes(m.id));
             } else {
-                // Default fallback: show known default models
-                models = accountModels.filter(m => DEFAULT_MODELS.some(d => d.id === m.id));
+                // Default fallback: show known default models, plus we show all dynamic pinned models
+                // 暂时退化：如果没有 config 就不阻拦了？不，没有 pinned 就显示内置+有 display_name 的。
+                models = accountModels.filter(m => DEFAULT_MODELS.some(d => d.id === m.id) || m.data.display_name);
             }
         }
 
         // 应用排序并过滤过期模型
-        return sortModels(models).filter(m => m.id !== 'claude-sonnet-4-5-thinking' && m.id !== 'claude-opus-4-5-thinking');
+        return sortModels(models).filter(m => m.id !== 'claude-sonnet-4-6-thinking' && m.id !== 'claude-sonnet-4-5-thinking' && m.id !== 'claude-opus-4-5-thinking');
     }, [config, account, showAllQuotas]);
 
     const isModelProtected = (key?: string) => {
@@ -163,6 +166,12 @@ function AccountCard({ account, selected, onSelect, isCurrent: propIsCurrent, is
                                     {t('accounts.forbidden').toUpperCase()}
                                 </span>
                             )}
+                            {account.validation_blocked && (
+                                <span className="px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 text-[9px] font-bold flex items-center gap-1 shadow-sm border border-amber-200/50">
+                                    <Clock className="w-2.5 h-2.5" />
+                                    {validationBlockedLabel.toUpperCase()}
+                                </span>
+                            )}
                             {/* 订阅类型徽章 */}
                             {account.quota?.subscription_tier && (() => {
                                 const tier = account.quota.subscription_tier.toLowerCase();
@@ -207,15 +216,21 @@ function AccountCard({ account, selected, onSelect, isCurrent: propIsCurrent, is
 
             {/* 配额展示 */}
             <div className="flex-1 px-2 mb-2 overflow-y-auto scrollbar-none">
-                {isDisabled || account.quota?.is_forbidden || account.proxy_disabled ? (
+                {isDisabled || account.quota?.is_forbidden || account.proxy_disabled || account.validation_blocked ? (
                     <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 h-full py-4 text-center">
-                        <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400">
-                            {isDisabled || account.proxy_disabled ? <Ban className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                        <div className={cn(
+                            "flex items-center gap-1.5",
+                            account.validation_blocked ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"
+                        )}>
+                            {account.validation_blocked ? <Clock className="w-4 h-4" /> : (isDisabled || account.proxy_disabled ? <Ban className="w-4 h-4" /> : <Lock className="w-4 h-4" />)}
                             <span className="text-[11px] font-bold">
-                                {isDisabled ? t('accounts.status.disabled') : account.proxy_disabled ? t('accounts.status.proxy_disabled') : t('accounts.forbidden_msg')}
+                                {account.validation_blocked ? validationBlockedLabel : (isDisabled ? t('accounts.status.disabled') : account.proxy_disabled ? t('accounts.status.proxy_disabled') : t('accounts.forbidden_msg'))}
                             </span>
                         </div>
-                        <div className="w-px h-3 bg-red-200 dark:bg-red-800/50 hidden sm:block" />
+                        <div className={cn(
+                            "w-px h-3 hidden sm:block",
+                            account.validation_blocked ? "bg-amber-200 dark:bg-amber-800/50" : "bg-red-200 dark:bg-red-800/50"
+                        )} />
                         <button
                             onClick={(e) => { e.stopPropagation(); onViewError(); }}
                             className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-medium"
@@ -305,10 +320,18 @@ function AccountCard({ account, selected, onSelect, isCurrent: propIsCurrent, is
                     <button
                         className={`p-1.5 rounded-lg transition-all ${(isSwitching || isDisabled) ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/10 cursor-not-allowed' : 'text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30'}`}
                         onClick={(e) => { e.stopPropagation(); onSwitch(); }}
-                        title={isDisabled ? t('accounts.disabled_tooltip') : (isSwitching ? t('common.loading') : t('common.switch'))}
+                        title={isDisabled ? t('accounts.disabled_tooltip') : (isSwitching ? t('common.loading') : t('accounts.switch_to_classic', '切换到 Antigravity (经典版)'))}
                         disabled={isSwitching || isDisabled}
                     >
                         <ArrowRightLeft className={`w-3.5 h-3.5 ${isSwitching ? 'animate-spin' : ''}`} />
+                    </button>
+                    <button
+                        className={`p-1.5 rounded-lg transition-all ${(isSwitching || isDisabled) ? 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/10 cursor-not-allowed' : 'text-gray-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/30'}`}
+                        onClick={(e) => { e.stopPropagation(); onSwitch('ide'); }}
+                        title={isDisabled ? t('accounts.disabled_tooltip') : (isSwitching ? t('common.loading') : t('accounts.switch_to_ide', '切换到 Antigravity IDE'))}
+                        disabled={isSwitching || isDisabled}
+                    >
+                        <Repeat2 className={`w-3.5 h-3.5 ${isSwitching ? 'animate-spin' : ''}`} />
                     </button>
                     {onWarmup && (
                         <button

@@ -1,4 +1,4 @@
-{
+﻿{
     "common": {
         "empty": "Trống",
         "loading": "Đang tải...",
@@ -158,6 +158,8 @@
         "last_used": "Dùng lần cuối",
         "reset_time": "Thời gian reset",
         "switch_to": "Chuyển sang tài khoản này",
+        "switch_to_classic": "Chuyển sang Antigravity (Cổ điển)",
+        "switch_to_ide": "Chuyển sang Antigravity IDE",
         "actions": "Thao tác",
         "device_fingerprint": "Vân Tay Thiết Bị",
         "show_all_quotas": "Hiển thị tất cả hạn ngạch",
@@ -430,6 +432,10 @@
             "antigravity_path_desc": "Nếu bạn cài Antigravity ở vị trí không chuẩn, hãy chỉ định đường dẫn file thực thi tại đây (Trỏ tới .app trên MacOS).",
             "antigravity_path_select": "Chọn file thực thi Antigravity",
             "antigravity_path_detected": "Đã cập nhật đường dẫn được phát hiện",
+            "antigravity_ide_path": "Đường dẫn Antigravity IDE",
+            "antigravity_ide_path_placeholder": "D:\\Antigravity\\Antigravity.exe",
+            "antigravity_ide_path_desc": "Chỉ định đường dẫn file thực thi của Antigravity IDE (trình soạn thảo code). Sau khi thiết lập, quá trình chuyển đổi tài khoản sẽ bảo vệ nghiêm ngặt các tiến trình tại đường dẫn này khỏi bị tắt.",
+            "antigravity_ide_path_select": "Chọn file thực thi Antigravity IDE",
             "detect_btn": "Phát hiện",
             "antigravity_args": "Tham số Khởi động Antigravity",
             "antigravity_args_placeholder": "--user-data-dir=/path/to/data --some-other-flag",
@@ -828,15 +834,6 @@
             "restore_defaults": "Khôi phục Mặc định",
             "reset_all": "Đặt lại Tất cả"
         },
-        "models": {
-            "flash": "Siêu nhanh",
-            "flash_thinking": "Khả năng Tư duy",
-            "pro_high": "Tư duy Tốt nhất",
-            "pro_low": "Hạn mức Thấp",
-            "sonnet": "Tư duy Code",
-            "sonnet_thinking": "Chuỗi Tư duy",
-            "opus_thinking": "Tư duy Mạnh nhất"
-        },
         "router": {
             "title": "Bộ Định tuyến Model (Router)",
             "subtitle": "Định tuyến model theo nhóm (Series) hoặc thêm ánh xạ chính xác.\nLưu ý: Các native model Claude (ví dụ: claude-opus-4-6-thinking) mặc định sẽ bỏ qua nhóm series và đi thẳng. Dùng \"Định tuyến Tùy chỉnh Cao cấp\" để ghi đè.",
@@ -849,10 +846,6 @@
             "presets_applied": "Đã áp dụng cài đặt sẵn thành công",
             "custom_mappings": "Ánh xạ Tùy chỉnh",
             "group_title": "Nhóm Series (Đích đến)",
-            "gemini3_group_label": "Gemini 3 (Khuyên dùng)",
-            "gemini3_option_high": "gemini-3-pro-high (Chất lượng Cao)",
-            "gemini3_option_low": "gemini-3-pro-low (Cân bằng)",
-            "gemini3_option_flash": "gemini-3-flash (Nhanh)",
             "groups": {
                 "claude_45": {
                     "name": "Dòng Claude 4.6 TK",
